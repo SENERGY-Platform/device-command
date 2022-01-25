@@ -1,0 +1,79 @@
+{
+    "debug":true,
+    "server_port":"8080",
+
+    "response_topic":"device-command-response",
+    "metadata_response_to":"device-command-response",
+
+    "error_topic":"device-command-errors",
+    "metadata_error_to":"device-command-errors",
+
+    "disable_kafka_consumer":false,
+    "kafka_url":"",
+
+    "disable_http_consumer":false,
+    "http_command_consumer_port":"8081",
+
+    "response_worker_count":20,
+    "marshaller_url":"http://marshaller:8080",
+    "device_manager_url":"http://device-manager:8080",
+    "device_repository_url":"http://device-repository:8080",
+    "permissions_url":"http://permissions.query:8080",
+
+    "timeout":"30s",
+
+    "group_scheduler":"parallel",
+    "http_command_consumer_sync":false,
+    "kafka_consumer_group":"device-command",
+
+    "async_flush_frequency":"500ms",
+    "async_compression":"snappy",
+    "sync_compression":"snappy",
+    "sync":false,
+    "sync_idempotent":false,
+    "partition_num":1,
+    "replication_factor":1,
+    "async_flush_messages":200,
+    "kafka_consumer_max_wait":"100ms",
+    "kafka_consumer_min_bytes":1000,
+    "kafka_consumer_max_bytes":1000000,
+    "sub_result_expiration_in_seconds":6000,
+    "sub_result_database_urls":[],
+    "memcached_timeout":"200ms",
+    "memcached_max_idle_conns":100,
+
+    "partial_result_store_size_in_mb":100,
+    "kafka_topic_configs":{
+        "device-command-response": [
+            {
+                "ConfigName":  "retention.ms",
+                "ConfigValue": "86400000"
+            }
+        ],
+        "device-command-errors": [
+            {
+                "ConfigName":  "retention.ms",
+                "ConfigValue": "86400000"
+            }
+        ],
+        "connector": [
+            {
+                "ConfigName":  "retention.ms",
+                "ConfigValue": "86400000"
+            }
+        ],
+        "mqtt": [
+            {
+                "ConfigName":  "retention.ms",
+                "ConfigValue": "86400000"
+            }
+        ],
+        "nimbus": [
+            {
+                "ConfigName":  "retention.ms",
+                "ConfigValue": "86400000"
+            }
+        ]
+    }
+}
+

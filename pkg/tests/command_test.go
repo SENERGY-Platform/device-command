@@ -1,0 +1,209 @@
+/*
+ * Copyright 2022 InfAI (CC SES)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package tests
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"github.com/SENERGY-Platform/device-command/pkg/api"
+	"github.com/SENERGY-Platform/device-command/pkg/command"
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
+	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
+	"github.com/SENERGY-Platform/external-task-worker/lib/test/mock"
+	"github.com/Shopify/sarama"
+	"io"
+	"net/http"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+)
+
+func TestCommand(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	config, err := configuration.Load("../../config.json")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	devices := map[string]map[string]interface{}{
+		"testOwner": {
+			"/devices/urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866": model.Device{
+				Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+		},
+	}
+
+	config, err = iotEnv(config, ctx, wg, devices)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	config, err = kafkaEnv(config, ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	//connector mock
+	maxWait, err := time.ParseDuration(config.KafkaConsumerMaxWait)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	producer, err := kafka.PrepareProducerWithConfig(ctx, config.KafkaUrl, kafka.ProducerConfig{
+		AsyncFlushFrequency: 100 * time.Millisecond,
+		AsyncCompression:    sarama.CompressionNone,
+		SyncCompression:     sarama.CompressionNone,
+		Sync:                config.Sync,
+		SyncIdempotent:      config.SyncIdempotent,
+		PartitionNum:        int(config.PartitionNum),
+		ReplicationFactor:   int(config.ReplicationFactor),
+		AsyncFlushMessages:  int(config.AsyncFlushMessages),
+		TopicConfigMap:      config.KafkaTopicConfigs,
+	})
+	if err != nil {
+		t.Log(config.KafkaUrl)
+		t.Error(err)
+		return
+	}
+	err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
+		KafkaUrl:       config.KafkaUrl,
+		GroupId:        "test-connector-mock",
+		Topic:          "connector",
+		MinBytes:       int(config.KafkaConsumerMinBytes),
+		MaxBytes:       int(config.KafkaConsumerMaxBytes),
+		MaxWait:        maxWait,
+		TopicConfigMap: config.KafkaTopicConfigs,
+	}, func(_ string, msg []byte, time time.Time) error {
+		t.Log(string(msg))
+		message := messages.ProtocolMsg{}
+		err := json.Unmarshal(msg, &message)
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		switch message.Metadata.Service.Id {
+		case "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3":
+			if message.Request.Input["data"] != "21" {
+				t.Error(message.Request.Input)
+			}
+		case "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1":
+			message.Response.Output = map[string]string{"data": `{"value": 13, "lastUpdate": 42}`}
+		case "urn:infai:ses:service:36fd778e-b04d-4d72-bed5-1b77ed1164b9":
+			//create timeout
+			return nil
+		}
+		resp, err := json.Marshal(message)
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		err = producer.ProduceWithKey(message.Metadata.ResponseTo, "key", string(resp))
+		if err != nil {
+			t.Error(err)
+			return nil
+		}
+		return nil
+	}, func(err error) {
+		t.Error(err)
+	})
+
+	cmd := command.NewWithFactories(ctx, config, comswitch.Factory, mock.Marshaller)
+	err = api.Start(ctx, config, cmd)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	t.Run("device setTemperature", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
+		Input:      21,
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
+	}, 200, "[null]"))
+
+	t.Run("device getTemperature", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+	}, 200, "[13]"))
+
+	t.Run("device timeout", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:00549f18-88b5-44c7-adb1-f558e8d53d1d",
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:36fd778e-b04d-4d72-bed5-1b77ed1164b9",
+	}, http.StatusRequestTimeout, `"timeout"`))
+
+	t.Run("invalid command", sendCommand(config, api.CommandMessage{
+		FunctionId: "foobar",
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+	}, 500, `"unable to load function: not found"`))
+}
+
+func sendCommand(config configuration.Config, commandMessage api.CommandMessage, expectedCode int, expectedContent string) func(t *testing.T) {
+	return func(t *testing.T) {
+		buff := &bytes.Buffer{}
+		err := json.NewEncoder(buff).Encode(commandMessage)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands", buff)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req.Header.Set("Authorization", testToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer resp.Body.Close()
+		actualContent, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if resp.StatusCode != expectedCode {
+			t.Error(resp.StatusCode, string(actualContent))
+			return
+		}
+		if strings.TrimSpace(string(actualContent)) != expectedContent {
+			t.Error("\n" + expectedContent + "\n" + string(actualContent))
+		}
+	}
+}
+
+const testToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwOGM0N2E4OC0yYzc5LTQyMGYtODEwNC02NWJkOWViYmU0MWUiLCJleHAiOjE1NDY1MDcyMzMsIm5iZiI6MCwiaWF0IjoxNTQ2NTA3MTczLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwMDEvYXV0aC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiZnJvbnRlbmQiLCJzdWIiOiJ0ZXN0T3duZXIiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmcm9udGVuZCIsIm5vbmNlIjoiOTJjNDNjOTUtNzViMC00NmNmLTgwYWUtNDVkZDk3M2I0YjdmIiwiYXV0aF90aW1lIjoxNTQ2NTA3MDA5LCJzZXNzaW9uX3N0YXRlIjoiNWRmOTI4ZjQtMDhmMC00ZWI5LTliNjAtM2EwYWUyMmVmYzczIiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJ1c2VyIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibWFzdGVyLXJlYWxtIjp7InJvbGVzIjpbInZpZXctcmVhbG0iLCJ2aWV3LWlkZW50aXR5LXByb3ZpZGVycyIsIm1hbmFnZS1pZGVudGl0eS1wcm92aWRlcnMiLCJpbXBlcnNvbmF0aW9uIiwiY3JlYXRlLWNsaWVudCIsIm1hbmFnZS11c2VycyIsInF1ZXJ5LXJlYWxtcyIsInZpZXctYXV0aG9yaXphdGlvbiIsInF1ZXJ5LWNsaWVudHMiLCJxdWVyeS11c2VycyIsIm1hbmFnZS1ldmVudHMiLCJtYW5hZ2UtcmVhbG0iLCJ2aWV3LWV2ZW50cyIsInZpZXctdXNlcnMiLCJ2aWV3LWNsaWVudHMiLCJtYW5hZ2UtYXV0aG9yaXphdGlvbiIsIm1hbmFnZS1jbGllbnRzIiwicXVlcnktZ3JvdXBzIl19LCJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJyb2xlcyI6WyJ1c2VyIl19.ykpuOmlpzj75ecSI6cHbCATIeY4qpyut2hMc1a67Ycg`

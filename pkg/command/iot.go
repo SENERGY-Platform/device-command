@@ -114,10 +114,7 @@ func (this *Iot) StoreToken(user string, token string) {
 }
 
 func (this *Iot) GetDevice(token devicerepository.Impersonate, id string) (result model.Device, err error) {
-	err = this.cache.Use("device."+id, func() (interface{}, error) {
-		return this.getDevice(token, id)
-	}, &result)
-	return
+	return this.getDevice(token, id) //no caching to ensure access check in repository
 }
 
 func (this *Iot) getDevice(token devicerepository.Impersonate, id string) (result model.Device, err error) {

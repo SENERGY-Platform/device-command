@@ -3,7 +3,7 @@ module github.com/SENERGY-Platform/device-command
 go 1.17
 
 require (
-	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220125113945-e55294c7220d
+	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220126092916-59bc70862f1a
 	github.com/Shopify/sarama v1.22.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/uuid v1.1.1
@@ -59,3 +59,6 @@ require (
 	gopkg.in/go-playground/colors.v1 v1.2.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
+
+//uncomment to test local changes of external-task-worker
+//replace github.com/SENERGY-Platform/external-task-worker => ../external-task-worker

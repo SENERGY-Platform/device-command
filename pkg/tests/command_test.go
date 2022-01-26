@@ -30,7 +30,9 @@ import (
 	"github.com/SENERGY-Platform/external-task-worker/lib/test/mock"
 	"github.com/Shopify/sarama"
 	"io"
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -48,6 +50,17 @@ func TestCommand(t *testing.T) {
 		return
 	}
 
+	config.ServerPort, err = GetFreePort()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	config.HttpCommandConsumerPort, err = GetFreePort()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	devices := map[string]map[string]interface{}{
 		"testOwner": {
 			"/devices/urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866": model.Device{
@@ -55,6 +68,12 @@ func TestCommand(t *testing.T) {
 				LocalId:      "d1",
 				Name:         "d1Name",
 				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			"/devices/lamp": model.Device{
+				Id:           "lamp",
+				LocalId:      "lamp",
+				Name:         "lamp",
+				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
 			},
 		},
 	}
@@ -120,6 +139,28 @@ func TestCommand(t *testing.T) {
 		case "urn:infai:ses:service:36fd778e-b04d-4d72-bed5-1b77ed1164b9":
 			//create timeout
 			return nil
+		case "urn:infai:ses:service:1b0ef253-16f7-4b65-8a15-fe79fccf7e70":
+			input := map[string]float64{}
+			err = json.Unmarshal([]byte(message.Request.Input["data"]), &input)
+			if err != nil {
+				t.Error(err)
+				return nil
+			}
+			//values are truncated to integers, not rounded
+			if input["brightness"] != float64(65) {
+				t.Error(message.Request.Input)
+			}
+			if input["hue"] != float64(176) {
+				t.Error(message.Request.Input)
+			}
+			if input["saturation"] != float64(70) {
+				t.Error(message.Request.Input)
+			}
+			if input["duration"] != float64(1) {
+				t.Error(message.Request.Input)
+			}
+		default:
+			t.Error("unknown service-id", message.Metadata.Service.Id)
 		}
 		resp, err := json.Marshal(message)
 		if err != nil {
@@ -169,6 +210,17 @@ func TestCommand(t *testing.T) {
 		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
 	}, 500, `"unable to load function: not found"`))
+
+	t.Run("device color", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599",
+		Input: map[string]interface{}{
+			"r": 50,
+			"g": 168,
+			"b": 162,
+		},
+		DeviceId:  "lamp",
+		ServiceId: "urn:infai:ses:service:1b0ef253-16f7-4b65-8a15-fe79fccf7e70",
+	}, 200, "[null]"))
 }
 
 func sendCommand(config configuration.Config, commandMessage api.CommandMessage, expectedCode int, expectedContent string) func(t *testing.T) {
@@ -207,3 +259,22 @@ func sendCommand(config configuration.Config, commandMessage api.CommandMessage,
 }
 
 const testToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwOGM0N2E4OC0yYzc5LTQyMGYtODEwNC02NWJkOWViYmU0MWUiLCJleHAiOjE1NDY1MDcyMzMsIm5iZiI6MCwiaWF0IjoxNTQ2NTA3MTczLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwMDEvYXV0aC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiZnJvbnRlbmQiLCJzdWIiOiJ0ZXN0T3duZXIiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmcm9udGVuZCIsIm5vbmNlIjoiOTJjNDNjOTUtNzViMC00NmNmLTgwYWUtNDVkZDk3M2I0YjdmIiwiYXV0aF90aW1lIjoxNTQ2NTA3MDA5LCJzZXNzaW9uX3N0YXRlIjoiNWRmOTI4ZjQtMDhmMC00ZWI5LTliNjAtM2EwYWUyMmVmYzczIiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJ1c2VyIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibWFzdGVyLXJlYWxtIjp7InJvbGVzIjpbInZpZXctcmVhbG0iLCJ2aWV3LWlkZW50aXR5LXByb3ZpZGVycyIsIm1hbmFnZS1pZGVudGl0eS1wcm92aWRlcnMiLCJpbXBlcnNvbmF0aW9uIiwiY3JlYXRlLWNsaWVudCIsIm1hbmFnZS11c2VycyIsInF1ZXJ5LXJlYWxtcyIsInZpZXctYXV0aG9yaXphdGlvbiIsInF1ZXJ5LWNsaWVudHMiLCJxdWVyeS11c2VycyIsIm1hbmFnZS1ldmVudHMiLCJtYW5hZ2UtcmVhbG0iLCJ2aWV3LWV2ZW50cyIsInZpZXctdXNlcnMiLCJ2aWV3LWNsaWVudHMiLCJtYW5hZ2UtYXV0aG9yaXphdGlvbiIsIm1hbmFnZS1jbGllbnRzIiwicXVlcnktZ3JvdXBzIl19LCJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJyb2xlcyI6WyJ1c2VyIl19.ykpuOmlpzj75ecSI6cHbCATIeY4qpyut2hMc1a67Ycg`
+
+func getFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	listener, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer listener.Close()
+	return listener.Addr().(*net.TCPAddr).Port, nil
+}
+
+func GetFreePort() (string, error) {
+	temp, err := getFreePort()
+	return strconv.Itoa(temp), err
+}

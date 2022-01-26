@@ -12,8 +12,8 @@ github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/SENERGY-Platform/converter v0.0.0-20200114152115-63d2a698b3c4 h1:NjPjdgPMfl4vmF04CwHpASVu0uUlOjgUlP+WWcYm7vA=
 github.com/SENERGY-Platform/converter v0.0.0-20200114152115-63d2a698b3c4/go.mod h1:9g7L104dDpSMLj3pSP5cPB+9+5SYhphHfZbqeT1f18E=
-github.com/SENERGY-Platform/external-task-worker v0.0.0-20220125113945-e55294c7220d h1:jDaMpaKtWVFzLscz87y0wl4Hm3W9gC4sMIzifwoIkZ8=
-github.com/SENERGY-Platform/external-task-worker v0.0.0-20220125113945-e55294c7220d/go.mod h1:bQp45PT/6E8zfsg0bWFffhcADhrbhgfcph9UnYN3r6o=
+github.com/SENERGY-Platform/external-task-worker v0.0.0-20220126092916-59bc70862f1a h1:GT095Gus+aNXSmzsNO2hRkFJ+KO8aiafostkeyDpI7c=
+github.com/SENERGY-Platform/external-task-worker v0.0.0-20220126092916-59bc70862f1a/go.mod h1:bQp45PT/6E8zfsg0bWFffhcADhrbhgfcph9UnYN3r6o=
 github.com/SENERGY-Platform/marshaller v0.0.0-20200819115755-79a11cda1994 h1:O9KtjQEIVxjd6d5krePtVL8BcZPWLN5rVD4qAYXfiPQ=
 github.com/SENERGY-Platform/marshaller v0.0.0-20200819115755-79a11cda1994/go.mod h1:cc9gdkVBIbmFs9saRaB/EyiTRzeJArbu+eD024mgmaE=
 github.com/Shopify/sarama v1.22.0 h1:rtiODsvY4jW6nUV6n3K+0gx/8WlAwVt+Ixt6RIvpYyo=

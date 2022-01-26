@@ -45,17 +45,20 @@ func iotEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.Wa
 			return
 		}
 		element, ok := endpoints[path]
+		log.Println("IOT: endpoint", ok, element)
 		if ok {
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			json.NewEncoder(writer).Encode(element)
 			return
 		}
 		element, ok = userSpecificEndpoints[token.GetUserId()][path]
+		log.Println("IOT: user endpoint", ok, element)
 		if ok {
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			json.NewEncoder(writer).Encode(element)
 			return
 		}
+		log.Println("IOT: ERROR: not found")
 		http.Error(writer, "not found", http.StatusNotFound)
 	}))
 	wg.Add(1)

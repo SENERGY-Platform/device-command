@@ -76,6 +76,155 @@ func iotEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.Wa
 
 var iotExport = `
 {
+"/device-types/urn:infai:ses:device-type:color_event": {
+        "attributes": null,
+        "description": "Philips Hue Color Light",
+        "device_class_id": "urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86",
+        "id": "urn:infai:ses:device-type:50fb0443-f356-4857-8f5d-59e6bef9d948",
+        "name": "Philips-Color-Light",
+        "rdf_type": "",
+        "services": [
+            {
+                "aspect_ids": [
+                    "urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6"
+                ],
+                "description": "",
+                "function_ids": [
+                    "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290",
+                    "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+                    "urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869"
+                ],
+                "id": "urn:infai:ses:service:color_event",
+                "inputs": [],
+                "interaction": "event",
+                "local_id": "getStatus",
+                "name": "getStatusService",
+                "outputs": [
+                    {
+                        "content_variable": {
+                            "characteristic_id": "",
+                            "id": "urn:infai:ses:content-variable:31482062-dc3f-47df-970a-f060a3833e5c",
+                            "name": "struct",
+                            "serialization_options": null,
+                            "sub_content_variables": [
+                                {
+                                    "characteristic_id": "urn:infai:ses:characteristic:d840607c-c8f9-45d6-b9bd-2c2d444e2899",
+                                    "id": "urn:infai:ses:content-variable:81b6be60-b6bf-4b8d-bfa8-f485faf08e4f",
+                                    "name": "brightness",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Integer",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "urn:infai:ses:characteristic:6ec70e99-8c6a-4909-8d5a-7cc12af76b9a",
+                                    "id": "urn:infai:ses:content-variable:a003d230-7a27-4263-8880-3a498735a5fd",
+                                    "name": "hue",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Integer",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "urn:infai:ses:characteristic:7dc1bb7e-b256-408a-a6f9-044dc60fdcf5",
+                                    "id": "urn:infai:ses:content-variable:75ac34d8-c7bd-4383-bfb4-aa43ab83d90a",
+                                    "name": "on",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Boolean",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "urn:infai:ses:characteristic:a66dc568-c0e0-420f-b513-18e8df405538",
+                                    "id": "urn:infai:ses:content-variable:6d1b575a-2412-429c-bc19-94df79d5c211",
+                                    "name": "saturation",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Integer",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "",
+                                    "id": "urn:infai:ses:content-variable:7103371b-f8f4-4baf-b215-aa5a9d7aa947",
+                                    "name": "status",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Integer",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "urn:infai:ses:characteristic:6bc41b45-a9f3-4d87-9c51-dd3e11257800",
+                                    "id": "urn:infai:ses:content-variable:29c58291-53b7-4112-9103-7de4c4b04933",
+                                    "name": "time",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Text",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "",
+                                    "id": "urn:infai:ses:content-variable:1c55a976-8f51-4cae-aa74-51187551e7ff",
+                                    "name": "brightness_unit",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Text",
+                                    "unit_reference": "brightness",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "",
+                                    "id": "urn:infai:ses:content-variable:30b8040e-8517-406e-995a-e477ade88296",
+                                    "name": "hue_unit",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Text",
+                                    "unit_reference": "hue",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "",
+                                    "id": "urn:infai:ses:content-variable:64bf5bfa-0246-4379-89ef-3a7495360502",
+                                    "name": "on_unit",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Text",
+                                    "unit_reference": "on",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "",
+                                    "id": "urn:infai:ses:content-variable:8b78149a-cbf7-4600-a58f-83fff08b8197",
+                                    "name": "saturation_unit",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Text",
+                                    "unit_reference": "saturation",
+                                    "value": null
+                                },
+                                {
+                                    "characteristic_id": "",
+                                    "id": "urn:infai:ses:content-variable:7eadc5e7-f01b-40cb-a2ce-e0c67d6c4c00",
+                                    "name": "time_unit",
+                                    "serialization_options": null,
+                                    "sub_content_variables": null,
+                                    "type": "https://schema.org/Text",
+                                    "unit_reference": "time",
+                                    "value": null
+                                }
+                            ],
+                            "type": "https://schema.org/StructuredValue",
+                            "value": null
+                        },
+                        "id": "urn:infai:ses:content:a9f506eb-52ef-4c05-9790-c72aa2975d7f",
+                        "protocol_segment_id": "urn:infai:ses:protocol-segment:0d211842-cef8-41ec-ab6b-9dbc31bc3a65",
+                        "serialization": "json"
+                    }
+                ],
+                "protocol_id": "urn:infai:ses:protocol:f3a63aeb-187e-4dd9-9ef5-d97a6eb6292b",
+                "rdf_type": ""
+            }
+        ]
+    },
     "/aspects/urn:infai:ses:aspect:4f41b8fb-8abc-411c-8121-19b05111b0c5": {
         "id": "urn:infai:ses:aspect:4f41b8fb-8abc-411c-8121-19b05111b0c5",
         "name": "Production",

@@ -61,6 +61,22 @@ func TestCommand(t *testing.T) {
 		return
 	}
 
+	config, err = timescaleEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
+		"color_event": {
+			"urn:infai:ses:service:color_event": {
+				"struct.hue":        176,
+				"struct.saturation": 70,
+				"struct.brightness": 65,
+				"struct.on":         true,
+				"struct.status":     200,
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	devices := map[string]map[string]interface{}{
 		"testOwner": {
 			"/devices/urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866": model.Device{
@@ -74,6 +90,12 @@ func TestCommand(t *testing.T) {
 				LocalId:      "lamp",
 				Name:         "lamp",
 				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+			},
+			"/devices/color_event": model.Device{
+				Id:           "color_event",
+				LocalId:      "color_event",
+				Name:         "color_event",
+				DeviceTypeId: "urn:infai:ses:device-type:color_event",
 			},
 		},
 	}
@@ -221,6 +243,18 @@ func TestCommand(t *testing.T) {
 		DeviceId:  "lamp",
 		ServiceId: "urn:infai:ses:service:1b0ef253-16f7-4b65-8a15-fe79fccf7e70",
 	}, 200, "[null]"))
+
+	t.Run("device event color", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869",
+		DeviceId:   "color_event",
+		ServiceId:  "urn:infai:ses:service:color_event",
+	}, 200, `[{"b":158,"g":166,"r":50}]`))
+
+	t.Run("device event on", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+		DeviceId:   "color_event",
+		ServiceId:  "urn:infai:ses:service:color_event",
+	}, 200, `["on"]`))
 }
 
 func sendCommand(config configuration.Config, commandMessage api.CommandMessage, expectedCode int, expectedContent string) func(t *testing.T) {

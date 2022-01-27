@@ -37,7 +37,9 @@ type CommandMessage struct {
 	ServiceId string `json:"service_id,omitempty"`
 
 	//group command
-	GroupId string `json:"group_id,omitempty"`
+	GroupId       string `json:"group_id,omitempty"`
+	AspectId      string `json:"aspect_id,omitempty"`
+	DeviceClassId string `json:"device_class_id,omitempty"`
 }
 
 func CommandEndpoints(config configuration.Config, router *httprouter.Router, command Command) {
@@ -68,7 +70,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 		}
 
 		if cmd.GroupId != "" {
-			code, result := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.Input)
+			code, result := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input)
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			writer.WriteHeader(code)
 			json.NewEncoder(writer).Encode(result)

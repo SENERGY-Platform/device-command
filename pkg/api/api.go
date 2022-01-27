@@ -33,7 +33,7 @@ import (
 
 type Command interface {
 	DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}) (code int, resp interface{})
-	GroupCommand(token auth.Token, groupId string, functionId string, input interface{}) (code int, resp interface{})
+	GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}) (code int, resp interface{})
 }
 
 var endpoints = []func(config configuration.Config, router *httprouter.Router, command Command){}

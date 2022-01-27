@@ -158,7 +158,7 @@ func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId 
 	return this.register.Wait(taskId)
 }
 
-func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, input interface{}) (code int, resp interface{}) {
+func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}) (code int, resp interface{}) {
 	this.iot.StoreToken(token.GetUserId(), token.Jwt())
 	function, err := this.iot.GetFunction(token.Jwt(), functionId)
 	if err != nil {
@@ -177,11 +177,22 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 	taskId := uuid.New().String()
 	this.register.Register(taskId)
 
+	var aspect *model.Aspect
+	if aspectId != "" {
+		aspect = &model.Aspect{Id: aspectId}
+	}
+	var deviceClass *model.DeviceClass
+	if deviceClassId != "" {
+		deviceClass = &model.DeviceClass{Id: deviceClassId}
+	}
+
 	this.taskWorker.ExecuteCommand(messages.Command{
 		Version:          2,
 		Function:         function,
 		CharacteristicId: characteristicId,
 		DeviceGroupId:    groupId,
+		Aspect:           aspect,
+		DeviceClass:      deviceClass,
 		Input:            input,
 		Retries:          0,
 	}, messages.CamundaExternalTask{

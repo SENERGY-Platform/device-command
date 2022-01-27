@@ -18,7 +18,8 @@
     "marshaller_url":"http://marshaller:8080",
     "device_manager_url":"http://device-manager:8080",
     "device_repository_url":"http://device-repository:8080",
-    "permissions_url":"http://permissions.query:8080",
+    "permissions_url":"http://query.permissions:8080",
+    "timescale_wrapper_url": "http://timescale-wrapper.timescale:8080",
 
     "timeout":"30s",
 

@@ -25,11 +25,14 @@ import (
 	"github.com/SENERGY-Platform/external-task-worker/lib/com"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicegroups"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/external-task-worker/util"
 	"github.com/google/uuid"
 	"net/http"
+	"strings"
 )
 
 type Command struct {
@@ -37,6 +40,7 @@ type Command struct {
 	iot        *Iot
 	register   *register.Register
 	config     configuration.Config
+	marshaller marshaller.Interface
 }
 
 func New(ctx context.Context, config configuration.Config) *Command {
@@ -45,9 +49,10 @@ func New(ctx context.Context, config configuration.Config) *Command {
 
 func NewWithFactories(ctx context.Context, config configuration.Config, comFactory com.FactoryInterface, marshallerFactory marshaller.FactoryInterface) *Command {
 	cmd := &Command{
-		config:   config,
-		iot:      NewIot(config),
-		register: register.New(config.TimeoutDuration, config.Debug),
+		config:     config,
+		iot:        NewIot(config),
+		register:   register.New(config.TimeoutDuration, config.Debug),
+		marshaller: marshallerFactory.New(config.MarshallerUrl),
 	}
 	cmd.taskWorker = lib.New(ctx, workerConfig(config), comFactory, cmd.iot, cmd, marshallerFactory)
 	return cmd
@@ -96,6 +101,17 @@ func workerConfig(config configuration.Config) util.Config {
 
 func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}) (code int, resp interface{}) {
 	this.iot.StoreToken(token.GetUserId(), token.Jwt())
+
+	iotToken := devicerepository.Impersonate(token.Jwt())
+	device, err := this.iot.GetDevice(iotToken, deviceId)
+	if err != nil {
+		return http.StatusInternalServerError, "unable to load device: " + err.Error()
+	}
+	service, err := this.iot.GetService(iotToken, device, serviceId)
+	if err != nil {
+		return http.StatusInternalServerError, "unable to load service: " + err.Error()
+	}
+
 	function, err := this.iot.GetFunction(token.Jwt(), functionId)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load function: " + err.Error()
@@ -110,6 +126,16 @@ func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId 
 		characteristicId = concept.BaseCharacteristicId
 	}
 
+	var protocol *model.Protocol
+	if service.Interaction == model.EVENT && isMeasuringFunctionId(functionId) {
+		temp, err := this.iot.GetProtocol(iotToken, service.ProtocolId)
+		if err != nil {
+			return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
+		}
+		protocol = &temp
+		return this.GetLastEventValue(token, device, service, temp, characteristicId)
+	}
+
 	taskId := uuid.New().String()
 	this.register.Register(taskId)
 
@@ -117,9 +143,10 @@ func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId 
 		Version:          2,
 		Function:         function,
 		CharacteristicId: characteristicId,
-		DeviceId:         deviceId,
-		ServiceId:        serviceId,
+		Device:           &device,
+		Service:          &service,
 		Input:            input,
+		Protocol:         protocol,
 		Retries:          0,
 	}, messages.CamundaExternalTask{
 		Id:        taskId,
@@ -165,4 +192,11 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 	}, util.CALLER_CAMUNDA_LOOP)
 
 	return this.register.Wait(taskId)
+}
+
+func isMeasuringFunctionId(id string) bool {
+	if strings.HasPrefix(id, model.MEASURING_FUNCTION_PREFIX) {
+		return true
+	}
+	return false
 }

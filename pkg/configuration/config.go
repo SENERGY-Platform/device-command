@@ -30,15 +30,17 @@ import (
 )
 
 type Config struct {
-	ServerPort          string        `json:"server_port"`
-	Debug               bool          `json:"debug"`
-	ResponseWorkerCount int64         `json:"response_worker_count"`
-	MarshallerUrl       string        `json:"marshaller_url"`
-	DeviceManagerUrl    string        `json:"device_manager_url"`
-	DeviceRepositoryUrl string        `json:"device_repository_url"`
-	KafkaUrl            string        `json:"kafka_url"`
-	Timeout             string        `json:"timeout"`
-	TimeoutDuration     time.Duration `json:"-"`
+	ServerPort          string `json:"server_port"`
+	Debug               bool   `json:"debug"`
+	ResponseWorkerCount int64  `json:"response_worker_count"`
+	MarshallerUrl       string `json:"marshaller_url"`
+	DeviceManagerUrl    string `json:"device_manager_url"`
+	DeviceRepositoryUrl string `json:"device_repository_url"`
+	TimescaleWrapperUrl string `json:"timescale_wrapper_url"`
+
+	KafkaUrl        string        `json:"kafka_url"`
+	Timeout         string        `json:"timeout"`
+	TimeoutDuration time.Duration `json:"-"`
 
 	KafkaConsumerGroup string `json:"kafka_consumer_group"`
 	ResponseTopic      string `json:"response_topic"`

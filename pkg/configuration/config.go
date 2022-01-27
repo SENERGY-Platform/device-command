@@ -66,6 +66,8 @@ type Config struct {
 	KafkaConsumerMinBytes int64  `json:"kafka_consumer_min_bytes"`
 	KafkaConsumerMaxBytes int64  `json:"kafka_consumer_max_bytes"`
 
+	//TODO: remove if use of v2
+	PartialResultStoreSizeInMb   int      `json:"partial_result_store_size_in_mb"`
 	SubResultExpirationInSeconds int32    `json:"sub_result_expiration_in_seconds"`
 	SubResultDatabaseUrls        []string `json:"sub_result_database_urls"`
 	MemcachedTimeout             string   `json:"memcached_timeout"`
@@ -74,8 +76,8 @@ type Config struct {
 	MetadataErrorTo string `json:"metadata_error_to"`
 	ErrorTopic      string `json:"error_topic"`
 
-	PartialResultStoreSizeInMb int                            `json:"partial_result_store_size_in_mb"`
-	KafkaTopicConfigs          map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`
+	DeviceRepoCacheSizeInMb int                            `json:"device_repo_cache_size_in_mb"` //TODO: remove if v1
+	KafkaTopicConfigs       map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

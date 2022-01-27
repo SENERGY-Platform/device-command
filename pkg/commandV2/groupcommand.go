@@ -76,7 +76,7 @@ func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId 
 		}
 
 		if deviceClassId == "" || deviceClassId == deviceType.DeviceClassId {
-			services := this.getFilteredServices(functionId, aspectId, deviceClassId, deviceType.Services)
+			services := this.getFilteredServices(functionId, aspectId, deviceType.Services)
 			for _, service := range services {
 				result = append(result, SubCommand{
 					FunctionId: functionId,
@@ -90,23 +90,21 @@ func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId 
 	return result, nil
 }
 
-func (this *Command) getFilteredServices(functionId string, aspectId string, deviceClassId string, services []model.Service) (result []model.Service) {
+func (this *Command) getFilteredServices(functionId string, aspectId string, services []model.Service) (result []model.Service) {
 	serviceIndex := map[string]model.Service{}
 	for _, service := range services {
 		for _, serviceFunctionId := range service.FunctionIds {
-			if !(isMeasuringFunctionId(serviceFunctionId) && service.Interaction == model.EVENT) { //mqtt cannot be measured in a task
-				if serviceFunctionId == functionId {
-					if aspectId != "" {
-						for _, aspect := range service.AspectIds {
-							if aspect == aspectId {
-								serviceIndex[service.Id] = service
-							}
+			if serviceFunctionId == functionId {
+				if aspectId != "" {
+					for _, aspect := range service.AspectIds {
+						if aspect == aspectId {
+							serviceIndex[service.Id] = service
 						}
 					}
-					if deviceClassId != "" {
-						serviceIndex[service.Id] = service
-					}
+				} else {
+					serviceIndex[service.Id] = service
 				}
+
 			}
 		}
 	}

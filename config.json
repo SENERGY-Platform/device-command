@@ -44,6 +44,7 @@
     "memcached_max_idle_conns":100,
 
     "partial_result_store_size_in_mb":100,
+    "device_repo_cache_size_in_mb": 100,
     "kafka_topic_configs":{
         "device-command-response": [
             {

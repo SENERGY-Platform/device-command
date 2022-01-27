@@ -25,7 +25,7 @@ import (
 	"github.com/SENERGY-Platform/external-task-worker/lib"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicegroups"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"github.com/SENERGY-Platform/external-task-worker/util"
@@ -98,7 +98,7 @@ func (this *Command) GetQueuedResponseHandler(ctx context.Context, workerCount i
 }
 
 func createLibConfig(config configuration.Config) util.Config {
-	devicegroups.LocalDbSize = config.PartialResultStoreSizeInMb * 1024 * 1024
+	devicerepository.L1Size = config.DeviceRepoCacheSizeInMb * 1024 * 1024
 	return util.Config{
 		Debug:                           config.Debug,
 		DeviceRepoUrl:                   config.DeviceRepositoryUrl,

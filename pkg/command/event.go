@@ -41,7 +41,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 	if err != nil {
 		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()
 	}
-	return 200, []interface{}{temp}
+	return 200, temp
 }
 
 func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol) (result map[string]string, err error) {

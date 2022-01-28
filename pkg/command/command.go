@@ -18,20 +18,18 @@ package command
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"errors"
+	"fmt"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/register"
 	"github.com/SENERGY-Platform/external-task-worker/lib"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicegroups"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/external-task-worker/util"
-	"github.com/google/uuid"
-	"net/http"
+	"log"
 	"strings"
 )
 
@@ -41,31 +39,71 @@ type Command struct {
 	register   *register.Register
 	config     configuration.Config
 	marshaller marshaller.Interface
+	producer   com.ProducerInterface
 }
 
-func New(ctx context.Context, config configuration.Config) *Command {
+func New(ctx context.Context, config configuration.Config) (cmd *Command, err error) {
 	return NewWithFactories(ctx, config, comswitch.Factory, marshaller.Factory)
 }
 
-func NewWithFactories(ctx context.Context, config configuration.Config, comFactory com.FactoryInterface, marshallerFactory marshaller.FactoryInterface) *Command {
-	cmd := &Command{
+func NewWithFactories(ctx context.Context, config configuration.Config, comFactory com.FactoryInterface, marshallerFactory marshaller.FactoryInterface) (cmd *Command, err error) {
+	cmd = &Command{
 		config:     config,
 		iot:        NewIot(config),
-		register:   register.New(config.TimeoutDuration, config.Debug),
+		register:   register.New(config.DefaultTimeoutDuration, config.Debug),
 		marshaller: marshallerFactory.New(config.MarshallerUrl),
 	}
-	cmd.taskWorker = lib.New(ctx, workerConfig(config), comFactory, cmd.iot, cmd, marshallerFactory)
-	return cmd
+	libConfig := createLibConfig(config)
+	if config.ResponseWorkerCount > 1 {
+		err = comFactory.NewConsumer(ctx, libConfig, cmd.GetQueuedResponseHandler(ctx, config.ResponseWorkerCount, config.ResponseWorkerCount), cmd.ErrorMessageHandler)
+	} else {
+		err = comFactory.NewConsumer(ctx, libConfig, cmd.HandleTaskResponse, cmd.ErrorMessageHandler)
+	}
+	if err != nil {
+		return cmd, err
+	}
+	cmd.producer, err = comFactory.NewProducer(ctx, libConfig)
+	if err != nil {
+		return cmd, err
+	}
+
+	return cmd, nil
 }
 
-func workerConfig(config configuration.Config) util.Config {
-	devicegroups.LocalDbSize = config.PartialResultStoreSizeInMb * 1024 * 1024
+func (this *Command) GetQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize int64) func(msg string) (err error) {
+	queue := make(chan string, queueSize)
+	for i := int64(0); i < workerCount; i++ {
+		go func() {
+			for msg := range queue {
+				err := this.HandleTaskResponse(msg)
+				if err != nil {
+					log.Println("ERROR: ", err)
+				}
+			}
+		}()
+	}
+	go func() {
+		<-ctx.Done()
+		close(queue)
+	}()
+	return func(msg string) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = errors.New(fmt.Sprint(r))
+			}
+		}()
+		queue <- msg
+		return err
+	}
+}
+
+func createLibConfig(config configuration.Config) util.Config {
+	devicerepository.L1Size = config.DeviceRepoCacheSizeInMb * 1024 * 1024
 	return util.Config{
 		Debug:                           config.Debug,
 		DeviceRepoUrl:                   config.DeviceRepositoryUrl,
 		CompletionStrategy:              util.PESSIMISTIC,
 		OptimisticTaskCompletionTimeout: 100,
-		CamundaFetchLockDuration:        config.TimeoutDuration.Milliseconds(),
 		KafkaUrl:                        config.KafkaUrl,
 		KafkaConsumerGroup:              config.KafkaConsumerGroup,
 		ResponseTopic:                   config.ResponseTopic,
@@ -88,121 +126,11 @@ func workerConfig(config configuration.Config) util.Config {
 		KafkaConsumerMaxWait:            config.KafkaConsumerMaxWait,
 		KafkaConsumerMinBytes:           config.KafkaConsumerMinBytes,
 		KafkaConsumerMaxBytes:           config.KafkaConsumerMaxBytes,
-		SubResultExpirationInSeconds:    config.SubResultExpirationInSeconds,
-		SubResultDatabaseUrls:           config.SubResultDatabaseUrls,
-		MemcachedTimeout:                config.MemcachedTimeout,
-		MemcachedMaxIdleConns:           config.MemcachedMaxIdleConns,
 		ResponseWorkerCount:             config.ResponseWorkerCount,
 		MetadataErrorTo:                 config.MetadataErrorTo,
 		ErrorTopic:                      config.ErrorTopic,
 		KafkaTopicConfigs:               config.KafkaTopicConfigs,
 	}
-}
-
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}) (code int, resp interface{}) {
-	this.iot.StoreToken(token.GetUserId(), token.Jwt())
-
-	iotToken := devicerepository.Impersonate(token.Jwt())
-	device, err := this.iot.GetDevice(iotToken, deviceId)
-	if err != nil {
-		return http.StatusInternalServerError, "unable to load device: " + err.Error()
-	}
-	service, err := this.iot.GetService(iotToken, device, serviceId)
-	if err != nil {
-		return http.StatusInternalServerError, "unable to load service: " + err.Error()
-	}
-
-	function, err := this.iot.GetFunction(token.Jwt(), functionId)
-	if err != nil {
-		return http.StatusInternalServerError, "unable to load function: " + err.Error()
-	}
-
-	characteristicId := ""
-	if function.ConceptId != "" {
-		concept, err := this.iot.GetConcept(token.Jwt(), function.ConceptId)
-		if err != nil {
-			return http.StatusInternalServerError, "unable to load concept: " + err.Error()
-		}
-		characteristicId = concept.BaseCharacteristicId
-	}
-
-	var protocol *model.Protocol
-	if service.Interaction == model.EVENT && isMeasuringFunctionId(functionId) {
-		temp, err := this.iot.GetProtocol(iotToken, service.ProtocolId)
-		if err != nil {
-			return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
-		}
-		protocol = &temp
-		return this.GetLastEventValue(token, device, service, temp, characteristicId)
-	}
-
-	taskId := uuid.New().String()
-	this.register.Register(taskId)
-
-	this.taskWorker.ExecuteCommand(messages.Command{
-		Version:          2,
-		Function:         function,
-		CharacteristicId: characteristicId,
-		Device:           &device,
-		Service:          &service,
-		Input:            input,
-		Protocol:         protocol,
-		Retries:          0,
-	}, messages.CamundaExternalTask{
-		Id:        taskId,
-		Variables: nil,
-		Retries:   0,
-		TenantId:  token.GetUserId(),
-	}, util.CALLER_CAMUNDA_LOOP)
-
-	return this.register.Wait(taskId)
-}
-
-func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}) (code int, resp interface{}) {
-	this.iot.StoreToken(token.GetUserId(), token.Jwt())
-	function, err := this.iot.GetFunction(token.Jwt(), functionId)
-	if err != nil {
-		return http.StatusInternalServerError, "unable to load function: " + err.Error()
-	}
-
-	characteristicId := ""
-	if function.ConceptId != "" {
-		concept, err := this.iot.GetConcept(token.Jwt(), function.ConceptId)
-		if err != nil {
-			return http.StatusInternalServerError, "unable to load concept: " + err.Error()
-		}
-		characteristicId = concept.BaseCharacteristicId
-	}
-
-	taskId := uuid.New().String()
-	this.register.Register(taskId)
-
-	var aspect *model.Aspect
-	if aspectId != "" {
-		aspect = &model.Aspect{Id: aspectId}
-	}
-	var deviceClass *model.DeviceClass
-	if deviceClassId != "" {
-		deviceClass = &model.DeviceClass{Id: deviceClassId}
-	}
-
-	this.taskWorker.ExecuteCommand(messages.Command{
-		Version:          2,
-		Function:         function,
-		CharacteristicId: characteristicId,
-		DeviceGroupId:    groupId,
-		Aspect:           aspect,
-		DeviceClass:      deviceClass,
-		Input:            input,
-		Retries:          0,
-	}, messages.CamundaExternalTask{
-		Id:        taskId,
-		Variables: nil,
-		Retries:   0,
-		TenantId:  token.GetUserId(),
-	}, util.CALLER_CAMUNDA_LOOP)
-
-	return this.register.Wait(taskId)
 }
 
 func isMeasuringFunctionId(id string) bool {

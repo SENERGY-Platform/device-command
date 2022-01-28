@@ -27,17 +27,27 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, input)
+func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}, timeout string) (code int, resp interface{}) {
+	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, input, timeout)
 	if code == http.StatusOK {
 		resp = []interface{}{resp}
 	}
 	return code, resp
 }
 
-func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}) (code int, resp interface{}) {
+func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}, timeout string) (code int, resp interface{}) {
+	timeoutDuration := this.config.DefaultTimeoutDuration
+	var err error
+	if timeout != "" {
+		timeoutDuration, err = time.ParseDuration(timeout)
+		if err != nil {
+			timeoutDuration = this.config.DefaultTimeoutDuration
+		}
+	}
+
 	device, err := this.iot.GetDevice(token.Jwt(), deviceId)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load device: " + err.Error()
@@ -118,7 +128,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		log.Println("ERROR:", err)
 		this.register.Complete(taskId, http.StatusInternalServerError, "unable to produce message")
 	}
-	return this.register.Wait(taskId)
+	return this.register.WaitWithTimeout(taskId, timeoutDuration)
 }
 
 func isControllingFunction(function model.Function) bool {

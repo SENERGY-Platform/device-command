@@ -23,15 +23,15 @@ import (
 	"time"
 )
 
-func New(timeout time.Duration, debug bool) *Register {
-	return &Register{register: map[string]*State{}, timeout: timeout, debug: debug}
+func New(defaultTimeout time.Duration, debug bool) *Register {
+	return &Register{register: map[string]*State{}, defaultTimeout: defaultTimeout, debug: debug}
 }
 
 type Register struct {
-	debug    bool
-	register map[string]*State
-	mux      sync.Mutex
-	timeout  time.Duration
+	debug          bool
+	register       map[string]*State
+	mux            sync.Mutex
+	defaultTimeout time.Duration
 }
 
 type State struct {
@@ -67,6 +67,10 @@ func (this *Register) Complete(id string, code int, value interface{}) {
 }
 
 func (this *Register) Wait(id string) (int, interface{}) {
+	return this.WaitWithTimeout(id, this.defaultTimeout)
+}
+
+func (this *Register) WaitWithTimeout(id string, timeout time.Duration) (int, interface{}) {
 	this.mux.Lock()
 	state, ok := this.register[id]
 	this.mux.Unlock()
@@ -75,7 +79,7 @@ func (this *Register) Wait(id string) (int, interface{}) {
 	}
 	defer delete(this.register, id)
 
-	t := time.AfterFunc(this.timeout, func() {
+	t := time.AfterFunc(timeout, func() {
 		this.Complete(id, http.StatusRequestTimeout, "timeout")
 	})
 	defer func() {

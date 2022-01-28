@@ -39,7 +39,7 @@ import (
 	"time"
 )
 
-func TestCommand(t *testing.T) {
+func TestCommandV2(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -199,7 +199,11 @@ func TestCommand(t *testing.T) {
 		t.Error(err)
 	})
 
-	cmd := command.NewWithFactories(ctx, config, comswitch.Factory, mock.Marshaller)
+	cmd, err := command.NewWithFactories(ctx, config, comswitch.Factory, mock.Marshaller)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	err = api.Start(ctx, config, cmd)
 	if err != nil {
 		t.Error(err)
@@ -255,6 +259,85 @@ func TestCommand(t *testing.T) {
 		DeviceId:   "color_event",
 		ServiceId:  "urn:infai:ses:service:color_event",
 	}, 200, `["on"]`))
+
+	t.Run("device batch", sendCommandBatch(config, api.BatchRequest{
+		{
+			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
+			Input:      21,
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
+		},
+		{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+		},
+		{
+			FunctionId: "urn:infai:ses:measuring-function:00549f18-88b5-44c7-adb1-f558e8d53d1d",
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:36fd778e-b04d-4d72-bed5-1b77ed1164b9",
+		},
+		{
+			FunctionId: "foobar",
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+		},
+		{
+			FunctionId: "urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599",
+			Input: map[string]interface{}{
+				"r": 50,
+				"g": 168,
+				"b": 162,
+			},
+			DeviceId:  "lamp",
+			ServiceId: "urn:infai:ses:service:1b0ef253-16f7-4b65-8a15-fe79fccf7e70",
+		},
+		{
+			FunctionId: "urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869",
+			DeviceId:   "color_event",
+			ServiceId:  "urn:infai:ses:service:color_event",
+		},
+		{
+			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+			DeviceId:   "color_event",
+			ServiceId:  "urn:infai:ses:service:color_event",
+		},
+	}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]}]`))
+}
+
+func sendCommandBatch(config configuration.Config, commandMessage api.BatchRequest, expectedCode int, expectedContent string) func(t *testing.T) {
+	return func(t *testing.T) {
+		buff := &bytes.Buffer{}
+		err := json.NewEncoder(buff).Encode(commandMessage)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands/batch?timeout=5s", buff)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req.Header.Set("Authorization", testToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer resp.Body.Close()
+		actualContent, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if resp.StatusCode != expectedCode {
+			t.Error(resp.StatusCode, string(actualContent))
+			return
+		}
+		if strings.TrimSpace(string(actualContent)) != expectedContent {
+			t.Error("\n" + expectedContent + "\n" + string(actualContent))
+		}
+	}
 }
 
 func sendCommand(config configuration.Config, commandMessage api.CommandMessage, expectedCode int, expectedContent string) func(t *testing.T) {
@@ -265,7 +348,7 @@ func sendCommand(config configuration.Config, commandMessage api.CommandMessage,
 			t.Error(err)
 			return
 		}
-		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands", buff)
+		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands?timeout=5s", buff)
 		if err != nil {
 			t.Error(err)
 			return

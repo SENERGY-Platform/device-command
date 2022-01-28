@@ -36,6 +36,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+		timeout := request.URL.Query().Get("timeout")
 		cmd := CommandMessage{}
 		err = json.NewDecoder(request.Body).Decode(&cmd)
 		if err != nil {
@@ -49,7 +50,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 		}
 
 		if cmd.DeviceId != "" && cmd.ServiceId != "" {
-			code, result := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input)
+			code, result := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input, timeout)
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			writer.WriteHeader(code)
 			json.NewEncoder(writer).Encode(result)
@@ -57,7 +58,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 		}
 
 		if cmd.GroupId != "" {
-			code, result := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input)
+			code, result := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout)
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			writer.WriteHeader(code)
 			json.NewEncoder(writer).Encode(result)
@@ -74,6 +75,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+		timeout := request.URL.Query().Get("timeout")
 		batch := BatchRequest{}
 		err = json.NewDecoder(request.Body).Decode(&batch)
 		if err != nil {
@@ -87,14 +89,14 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 			return
 		}
 
-		result := runBatch(token, command, batch)
+		result := runBatch(token, command, batch, timeout)
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		json.NewEncoder(writer).Encode(result)
 		return
 	})
 }
 
-func runBatch(token auth.Token, command Command, batch BatchRequest) []BatchResultElement {
+func runBatch(token auth.Token, command Command, batch BatchRequest, timeout string) []BatchResultElement {
 	if len(batch) == 0 {
 		return []BatchResultElement{}
 	}
@@ -108,7 +110,7 @@ func runBatch(token auth.Token, command Command, batch BatchRequest) []BatchResu
 		go func(i int, cmd CommandMessage) {
 			defer wg.Done()
 			if cmd.DeviceId != "" && cmd.ServiceId != "" {
-				code, temp := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input)
+				code, temp := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input, timeout)
 				mux.Lock()
 				defer mux.Unlock()
 				result[i] = BatchResultElement{
@@ -119,7 +121,7 @@ func runBatch(token auth.Token, command Command, batch BatchRequest) []BatchResu
 			}
 
 			if cmd.GroupId != "" {
-				code, temp := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input)
+				code, temp := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout)
 				mux.Lock()
 				defer mux.Unlock()
 				result[i] = BatchResultElement{

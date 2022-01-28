@@ -38,9 +38,9 @@ type Config struct {
 	DeviceRepositoryUrl string `json:"device_repository_url"`
 	TimescaleWrapperUrl string `json:"timescale_wrapper_url"`
 
-	KafkaUrl        string        `json:"kafka_url"`
-	Timeout         string        `json:"timeout"`
-	TimeoutDuration time.Duration `json:"-"`
+	KafkaUrl               string        `json:"kafka_url"`
+	DefaultTimeout         string        `json:"default_timeout"`
+	DefaultTimeoutDuration time.Duration `json:"-"`
 
 	KafkaConsumerGroup string `json:"kafka_consumer_group"`
 	ResponseTopic      string `json:"response_topic"`
@@ -66,17 +66,10 @@ type Config struct {
 	KafkaConsumerMinBytes int64  `json:"kafka_consumer_min_bytes"`
 	KafkaConsumerMaxBytes int64  `json:"kafka_consumer_max_bytes"`
 
-	//TODO: remove if use of v2
-	PartialResultStoreSizeInMb   int      `json:"partial_result_store_size_in_mb"`
-	SubResultExpirationInSeconds int32    `json:"sub_result_expiration_in_seconds"`
-	SubResultDatabaseUrls        []string `json:"sub_result_database_urls"`
-	MemcachedTimeout             string   `json:"memcached_timeout"`
-	MemcachedMaxIdleConns        int64    `json:"memcached_max_idle_conns"`
-
 	MetadataErrorTo string `json:"metadata_error_to"`
 	ErrorTopic      string `json:"error_topic"`
 
-	DeviceRepoCacheSizeInMb int                            `json:"device_repo_cache_size_in_mb"` //TODO: remove if v1
+	DeviceRepoCacheSizeInMb int                            `json:"device_repo_cache_size_in_mb"`
 	KafkaTopicConfigs       map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`
 }
 
@@ -94,7 +87,7 @@ func Load(location string) (config Config, err error) {
 		return config, error
 	}
 	handleEnvironmentVars(&config)
-	config.TimeoutDuration, err = time.ParseDuration(config.Timeout)
+	config.DefaultTimeoutDuration, err = time.ParseDuration(config.DefaultTimeout)
 	return config, err
 }
 

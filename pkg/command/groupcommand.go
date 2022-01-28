@@ -19,6 +19,7 @@ package command
 import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"log"
 	"net/http"
 	"sync"
 )
@@ -37,6 +38,9 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 		go func(sub SubCommand) {
 			defer wg.Done()
 			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, input, timeout)
+			if this.config.Debug {
+				log.Println("DEBUG: group sub result:", tempCode, temp)
+			}
 			if tempCode == http.StatusOK {
 				results = append(results, temp)
 			} else {

@@ -39,7 +39,7 @@ import (
 	"time"
 )
 
-func TestCommandV2(t *testing.T) {
+func TestCommand(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -85,10 +85,28 @@ func TestCommandV2(t *testing.T) {
 				Name:         "d1Name",
 				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
 			},
+			"/devices/temperature2": model.Device{
+				Id:           "temperature2",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			"/devices/temperature3": model.Device{
+				Id:           "temperature3",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
 			"/devices/lamp": model.Device{
 				Id:           "lamp",
 				LocalId:      "lamp",
 				Name:         "lamp",
+				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+			},
+			"/devices/lamp2": model.Device{
+				Id:           "lamp2",
+				LocalId:      "lamp2",
+				Name:         "lamp2",
 				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
 			},
 			"/devices/color_event": model.Device{
@@ -96,6 +114,14 @@ func TestCommandV2(t *testing.T) {
 				LocalId:      "color_event",
 				Name:         "color_event",
 				DeviceTypeId: "urn:infai:ses:device-type:color_event",
+			},
+			"/device-groups/group_temperature": model.DeviceGroup{
+				Id:        "group_temperature",
+				DeviceIds: []string{"urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866", "temperature2", "temperature3"},
+			},
+			"/device-groups/group_color": model.DeviceGroup{
+				Id:        "group_color",
+				DeviceIds: []string{"color_event", "lamp", "lamp2"},
 			},
 		},
 	}
@@ -158,9 +184,14 @@ func TestCommandV2(t *testing.T) {
 			}
 		case "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1":
 			message.Response.Output = map[string]string{"data": `{"value": 13, "lastUpdate": 42}`}
+		case "urn:infai:ses:service:4b6c4567-f256-4dbd-a562-d13442ad4530":
+			//create timeout
+			return nil
 		case "urn:infai:ses:service:36fd778e-b04d-4d72-bed5-1b77ed1164b9":
 			//create timeout
 			return nil
+		case "urn:infai:ses:service:1199edee-fbf7-44fb-9228-9a9db69bbdd4":
+			message.Response.Output = map[string]string{"data": `{"brightness": 65, "hue": 176, "saturation": 70, "kelvin": 0, "on": true, "status": 200}`}
 		case "urn:infai:ses:service:1b0ef253-16f7-4b65-8a15-fe79fccf7e70":
 			input := map[string]float64{}
 			err = json.Unmarshal([]byte(message.Request.Input["data"]), &input)
@@ -183,6 +214,7 @@ func TestCommandV2(t *testing.T) {
 			}
 		default:
 			t.Error("unknown service-id", message.Metadata.Service.Id)
+			return nil
 		}
 		resp, err := json.Marshal(message)
 		if err != nil {
@@ -259,6 +291,18 @@ func TestCommandV2(t *testing.T) {
 		DeviceId:   "color_event",
 		ServiceId:  "urn:infai:ses:service:color_event",
 	}, 200, `["on"]`))
+
+	//some services are called as event (timescale call), some as request
+	t.Run("device group color", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869",
+		GroupId:    "group_color",
+	}, 200, `[{"b":158,"g":166,"r":50},{"b":158,"g":166,"r":50},{"b":158,"g":166,"r":50}]`))
+
+	//some services return a timeout, some return 13
+	t.Run("device group getTemperature", sendCommand(config, api.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		GroupId:    "group_temperature",
+	}, 200, "[13,13,13]"))
 
 	t.Run("device batch", sendCommandBatch(config, api.BatchRequest{
 		{

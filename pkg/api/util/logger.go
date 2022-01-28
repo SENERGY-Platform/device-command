@@ -41,5 +41,7 @@ func (this *LoggerMiddleWare) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 func (this *LoggerMiddleWare) log(request *http.Request) {
 	method := request.Method
 	path := request.URL
-	log.Printf("[%v] %v \n", method, path)
+	if path.String() != "/" { //ignore health checks
+		log.Printf("[%v] %v \n", method, path)
+	}
 }

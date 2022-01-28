@@ -19,11 +19,14 @@ package pkg
 import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/api"
-	"github.com/SENERGY-Platform/device-command/pkg/command"
+	"github.com/SENERGY-Platform/device-command/pkg/commandV2"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 )
 
 func Start(ctx context.Context, config configuration.Config) error {
-	cmd := command.New(ctx, config)
+	cmd, err := command.New(ctx, config)
+	if err != nil {
+		return err
+	}
 	return api.Start(ctx, config, cmd)
 }

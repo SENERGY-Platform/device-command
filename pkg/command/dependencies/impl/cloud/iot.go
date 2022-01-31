@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package iot
+package cloud
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
@@ -33,6 +35,10 @@ import (
 type Iot struct {
 	cache  *devicerepository.Cache
 	config configuration.Config
+}
+
+func IotFactory(ctx context.Context, config configuration.Config) (interfaces.Iot, error) {
+	return NewIot(config), nil
 }
 
 func NewIot(config configuration.Config) *Iot {

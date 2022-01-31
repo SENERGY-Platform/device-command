@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220126092916-59bc70862f1a
-	github.com/SENERGY-Platform/marshaller v0.0.0-20200819115755-79a11cda1994
+	github.com/SENERGY-Platform/marshaller v0.0.0-20210720115427-e647c7c0fe71
 	github.com/Shopify/sarama v1.22.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/uuid v1.1.1

@@ -22,12 +22,12 @@ import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
-	"github.com/SENERGY-Platform/external-task-worker/lib/test/mock"
 	"github.com/Shopify/sarama"
 	"io"
 	"net"
@@ -231,7 +231,7 @@ func TestCommand(t *testing.T) {
 		t.Error(err)
 	})
 
-	cmd, err := command.NewWithFactories(ctx, config, comswitch.Factory, mock.Marshaller, command.DefaultIotFactory)
+	cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, cloud.TimescaleFactory)
 	if err != nil {
 		t.Error(err)
 		return

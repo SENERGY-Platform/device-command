@@ -17,19 +17,16 @@
 package command
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/serialization"
-	"io"
 	"log"
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 )
 
 func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string) (code int, result interface{}) {
@@ -46,7 +43,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 
 func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol) (result map[string]string, err error) {
 	request := createTimescaleRequest(device, service)
-	response, err := this.timescaleRequest(token, request)
+	response, err := this.timescale.Query(token, request)
 	if err != nil {
 		return result, err
 	}
@@ -57,7 +54,7 @@ func (this *Command) getLastEventMessage(token auth.Token, device model.Device, 
 	return result, err
 }
 
-func createEventValueFromTimescaleValues(service model.Service, protocol model.Protocol, request []TimescaleRequest, response []TimescaleResponse) (result map[string]string, err error) {
+func createEventValueFromTimescaleValues(service model.Service, protocol model.Protocol, request []interfaces.TimescaleRequest, response []interfaces.TimescaleResponse) (result map[string]string, err error) {
 	result = map[string]string{}
 	timescaleValue := getTimescaleValue(request, response)
 	for _, content := range service.Outputs {
@@ -83,7 +80,7 @@ func marshalSegmentValue(serializationTo string, value interface{}, rootName str
 	return m.Marshal(value, marshallermodel.ContentVariable{Name: rootName})
 }
 
-func getTimescaleValue(timescaleRequests []TimescaleRequest, timescaleResponses []TimescaleResponse) (result map[string]interface{}) {
+func getTimescaleValue(timescaleRequests []interfaces.TimescaleRequest, timescaleResponses []interfaces.TimescaleResponse) (result map[string]interface{}) {
 	pathToValue := map[string]interface{}{}
 	paths := []string{}
 	for i, request := range timescaleRequests {
@@ -134,40 +131,13 @@ func getSegmentName(protocol model.Protocol, id string) string {
 	return ""
 }
 
-func (this *Command) timescaleRequest(token auth.Token, request []TimescaleRequest) (result []TimescaleResponse, err error) {
-	body := &bytes.Buffer{}
-	err = json.NewEncoder(body).Encode(request)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest("POST", this.config.TimescaleWrapperUrl+"/last-values", body)
-	if err != nil {
-		return result, err
-	}
-	req.Header.Set("Authorization", token.Jwt())
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return result, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		temp, _ := io.ReadAll(resp.Body)
-		return result, errors.New(strings.TrimSpace(string(temp)))
-	}
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	return
-}
-
-func createTimescaleRequest(device model.Device, service model.Service) (result []TimescaleRequest) {
+func createTimescaleRequest(device model.Device, service model.Service) (result []interfaces.TimescaleRequest) {
 	paths := []string{}
 	for _, content := range service.Outputs {
 		paths = append(paths, getContentPaths([]string{}, content.ContentVariable)...)
 	}
 	for _, path := range paths {
-		result = append(result, TimescaleRequest{
+		result = append(result, interfaces.TimescaleRequest{
 			DeviceId:   device.Id,
 			ServiceId:  service.Id,
 			ColumnName: path,
@@ -192,15 +162,4 @@ func getContentPaths(current []string, variable model.ContentVariable) (result [
 		result = append(result, getContentPaths(append(current, variable.Name), sub)...)
 	}
 	return result
-}
-
-type TimescaleRequest struct {
-	DeviceId   string
-	ServiceId  string
-	ColumnName string
-}
-
-type TimescaleResponse struct {
-	Time  *string     `json:"time"`
-	Value interface{} `json:"value"`
 }

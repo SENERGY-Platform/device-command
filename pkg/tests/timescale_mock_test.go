@@ -19,7 +19,7 @@ package tests
 import (
 	"context"
 	"encoding/json"
-	"github.com/SENERGY-Platform/device-command/pkg/command"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"log"
 	"net/http"
@@ -30,7 +30,7 @@ import (
 func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, values map[string]map[string]map[string]interface{}) (config configuration.Config, err error) {
 	config = initialConfig
 
-	get := func(req command.TimescaleRequest) (value interface{}) {
+	get := func(req interfaces.TimescaleRequest) (value interface{}) {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Println(err)
@@ -42,16 +42,16 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		msg := []command.TimescaleRequest{}
+		msg := []interfaces.TimescaleRequest{}
 		err = json.NewDecoder(request.Body).Decode(&msg)
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		result := []command.TimescaleResponse{}
+		result := []interfaces.TimescaleResponse{}
 
 		for _, req := range msg {
-			result = append(result, command.TimescaleResponse{
+			result = append(result, interfaces.TimescaleResponse{
 				Value: get(req),
 			})
 		}

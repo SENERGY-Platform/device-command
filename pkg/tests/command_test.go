@@ -231,7 +231,7 @@ func TestCommand(t *testing.T) {
 		t.Error(err)
 	})
 
-	cmd, err := command.NewWithFactories(ctx, config, comswitch.Factory, mock.Marshaller)
+	cmd, err := command.NewWithFactories(ctx, config, comswitch.Factory, mock.Marshaller, command.DefaultIotFactory)
 	if err != nil {
 		t.Error(err)
 		return

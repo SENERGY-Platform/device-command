@@ -20,9 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/SENERGY-Platform/device-command/pkg/command/iot"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/register"
-	"github.com/SENERGY-Platform/external-task-worker/lib"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
@@ -34,24 +34,42 @@ import (
 )
 
 type Command struct {
-	taskWorker *lib.CmdWorker
-	iot        *Iot
+	iot        Iot
 	register   *register.Register
 	config     configuration.Config
 	marshaller marshaller.Interface
 	producer   com.ProducerInterface
 }
 
-func New(ctx context.Context, config configuration.Config) (cmd *Command, err error) {
-	return NewWithFactories(ctx, config, comswitch.Factory, marshaller.Factory)
+type Iot interface {
+	GetFunction(token string, id string) (result model.Function, err error)
+	GetConcept(token string, id string) (result model.Concept, err error)
+	GetDevice(token string, id string) (result model.Device, err error)
+	GetProtocol(token string, id string) (result model.Protocol, err error)
+	GetService(token string, device model.Device, id string) (result model.Service, err error)
+	GetDeviceType(token string, id string) (result model.DeviceType, err error)
+	GetDeviceGroup(token string, id string) (result model.DeviceGroup, err error)
 }
 
-func NewWithFactories(ctx context.Context, config configuration.Config, comFactory com.FactoryInterface, marshallerFactory marshaller.FactoryInterface) (cmd *Command, err error) {
+type IotFactory func(config configuration.Config) (Iot, error)
+
+func DefaultIotFactory(config configuration.Config) (Iot, error) {
+	return iot.NewIot(config), nil
+}
+
+func New(ctx context.Context, config configuration.Config) (cmd *Command, err error) {
+	return NewWithFactories(ctx, config, comswitch.Factory, marshaller.Factory, DefaultIotFactory)
+}
+
+func NewWithFactories(ctx context.Context, config configuration.Config, comFactory com.FactoryInterface, marshallerFactory marshaller.FactoryInterface, iotFactory IotFactory) (cmd *Command, err error) {
 	cmd = &Command{
 		config:     config,
-		iot:        NewIot(config),
 		register:   register.New(config.DefaultTimeoutDuration, config.Debug),
 		marshaller: marshallerFactory.New(config.MarshallerUrl),
+	}
+	cmd.iot, err = iotFactory(config)
+	if err != nil {
+		return cmd, err
 	}
 	libConfig := createLibConfig(config)
 	if config.ResponseWorkerCount > 1 {

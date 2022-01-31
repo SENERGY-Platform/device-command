@@ -37,8 +37,4 @@ jobs:
       - name: Deploy Worker
         uses: wei/curl@v1
         with:
-          args: -X POST -u ${{ secrets.RANCHER_TOKEN }} ${{ secrets.RANCHER_URL }}${{ secrets.RANCHER_SERVICE_WORKER }}?action=redeploy
-      - name: Deploy Query
-        uses: wei/curl@v1
-        with:
-          args: -X POST -u ${{ secrets.RANCHER_TOKEN }} ${{ secrets.RANCHER_URL }}${{ secrets.RANCHER_SERVICE_QUERY }}?action=redeploy
+          args: -X POST -u ${{ secrets.RANCHER_TOKEN }} ${{ secrets.RANCHER_URL }}${{ secrets.RANCHER_SERVICE }}?action=redeploy

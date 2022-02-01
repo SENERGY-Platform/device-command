@@ -362,8 +362,7 @@ func TestCommand(t *testing.T) {
 			DeviceId:   "urn:infai:ses:device:timestamp-test",
 			ServiceId:  "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033",
 		},
-		//TODO: update expected result as soon as converter gets timestamps conversions implemented
-	}, 200, `[{"status_code":500,"message":"no concept found for characteristic id urn:infai:ses:characteristic:6bc41b45-a9f3-4d87-9c51-dd3e11257800"}]`))
+	}, 200, `[{"status_code":200,"message":["1970-01-01T01:00:00+01:00"]}]`))
 }
 
 func sendCommandBatch(config configuration.Config, commandMessage api.BatchRequest, expectedCode int, expectedContent string) func(t *testing.T) {

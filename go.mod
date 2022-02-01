@@ -3,8 +3,9 @@ module github.com/SENERGY-Platform/device-command
 go 1.17
 
 require (
-	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220126092916-59bc70862f1a
-	github.com/SENERGY-Platform/marshaller v0.0.0-20210720115427-e647c7c0fe71
+	github.com/SENERGY-Platform/converter v0.0.0-20220201091046-236e7b8313ab
+	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220201110911-1c8239705679
+	github.com/SENERGY-Platform/marshaller v0.0.0-20220201110630-1ced77b3dd21
 	github.com/Shopify/sarama v1.22.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/uuid v1.1.1
@@ -19,7 +20,6 @@ require (
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/SENERGY-Platform/converter v0.0.0-20200114152115-63d2a698b3c4 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b // indirect
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -67,3 +67,4 @@ require (
 
 //uncomment to test local changes of external-task-worker
 //replace github.com/SENERGY-Platform/external-task-worker => ../external-task-worker
+//replace github.com/SENERGY-Platform/converter => ../converter-service

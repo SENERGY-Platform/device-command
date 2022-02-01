@@ -29,7 +29,9 @@ func (this *Command) HandleTaskResponse(msg string) (err error) {
 	var message messages.ProtocolMsg
 	err = json.Unmarshal([]byte(msg), &message)
 	if err != nil {
-		this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, err.Error())
+		log.Println("ERROR:", err)
+		debug.PrintStack()
+		this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, "unable interpret response message")
 		return nil
 	}
 

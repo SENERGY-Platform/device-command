@@ -29,14 +29,16 @@ func (this *Command) HandleTaskResponse(msg string) (err error) {
 	var message messages.ProtocolMsg
 	err = json.Unmarshal([]byte(msg), &message)
 	if err != nil {
-		return err
+		this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, err.Error())
+		return nil
 	}
 
 	var output interface{}
 	if message.Metadata.OutputCharacteristic != model.NullCharacteristic.Id {
 		output, err = this.marshaller.UnmarshalFromServiceAndProtocol(message.Metadata.OutputCharacteristic, message.Metadata.Service, message.Metadata.Protocol, message.Response.Output, message.Metadata.ContentVariableHints)
 		if err != nil {
-			return err
+			this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, err.Error())
+			return nil
 		}
 	}
 

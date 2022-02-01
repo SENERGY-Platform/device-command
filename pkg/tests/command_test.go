@@ -79,6 +79,12 @@ func TestCommand(t *testing.T) {
 
 	devices := map[string]map[string]interface{}{
 		"testOwner": {
+			"/devices/urn:infai:ses:device:timestamp-test": model.Device{
+				Id:           "urn:infai:ses:device:timestamp-test",
+				LocalId:      "d1-timestamp",
+				Name:         "d1Name-timestamp",
+				DeviceTypeId: "urn:infai:ses:device-type:24b294e8-4676-4782-8dc9-a008c0d94770",
+			},
 			"/devices/urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866": model.Device{
 				Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 				LocalId:      "d1",
@@ -178,6 +184,8 @@ func TestCommand(t *testing.T) {
 			return nil
 		}
 		switch message.Metadata.Service.Id {
+		case "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033":
+			message.Response.Output = map[string]string{"data": `{"value": "clear", "lastUpdate": 0, "lastUpdate_unit": "unit"}`}
 		case "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3":
 			if message.Request.Input["data"] != "21" {
 				t.Error(message.Request.Input)
@@ -347,6 +355,15 @@ func TestCommand(t *testing.T) {
 			ServiceId:  "urn:infai:ses:service:color_event",
 		},
 	}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]}]`))
+
+	t.Run("new timestamp", sendCommandBatch(config, api.BatchRequest{
+		{
+			FunctionId: "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290",
+			DeviceId:   "urn:infai:ses:device:timestamp-test",
+			ServiceId:  "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033",
+		},
+		//TODO: update expected result as soon as converter gets timestamps conversions implemented
+	}, 200, `[{"status_code":500,"message":"no concept found for characteristic id urn:infai:ses:characteristic:6bc41b45-a9f3-4d87-9c51-dd3e11257800"}]`))
 }
 
 func sendCommandBatch(config configuration.Config, commandMessage api.BatchRequest, expectedCode int, expectedContent string) func(t *testing.T) {

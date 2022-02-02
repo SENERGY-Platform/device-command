@@ -18,32 +18,64 @@ package cloud
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/external-task-worker/lib/com"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
+	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/external-task-worker/util"
 	"log"
+	"runtime/debug"
 )
 
-func ComFactory(ctx context.Context, config configuration.Config, responseListener func(msg string) error, errorListener func(msg string) error) (producer interfaces.Producer, err error) {
+func ComFactory(ctx context.Context, config configuration.Config, responseListener func(msg messages.ProtocolMsg) error, errorListener func(msg messages.ProtocolMsg) error) (producer interfaces.Producer, err error) {
 	comFactory := kafka.Factory
 	libConfig := createLibConfig(config)
+	resp := getLibListener(responseListener)
+	errL := getLibListener(errorListener)
 	if config.ResponseWorkerCount > 1 {
-		err = comFactory.NewConsumer(ctx, libConfig, getQueuedResponseHandler(ctx, config.ResponseWorkerCount, config.ResponseWorkerCount, responseListener), errorListener)
+		err = comFactory.NewConsumer(ctx, libConfig, getQueuedResponseHandler(ctx, config.ResponseWorkerCount, config.ResponseWorkerCount, resp), errL)
 	} else {
-		err = comFactory.NewConsumer(ctx, libConfig, responseListener, errorListener)
+		err = comFactory.NewConsumer(ctx, libConfig, resp, errL)
 	}
 	if err != nil {
 		return producer, err
 	}
-	producer, err = comFactory.NewProducer(ctx, libConfig)
+	prod := &Producer{}
+	prod.libProducer, err = comFactory.NewProducer(ctx, libConfig)
 	if err != nil {
-		return producer, err
+		return prod, err
 	}
-	return producer, nil
+	return prod, nil
+}
+
+type Producer struct {
+	libProducer com.ProducerInterface
+}
+
+func (this *Producer) SendCommand(msg messages.ProtocolMsg) (err error) {
+	message, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return this.libProducer.ProduceWithKey(msg.Metadata.Protocol.Handler, msg.Metadata.Device.Id, string(message))
+}
+
+func getLibListener(listener func(msg messages.ProtocolMsg) error) (result func(msg string) error) {
+	return func(msg string) error {
+		message := messages.ProtocolMsg{}
+		err := json.Unmarshal([]byte(msg), &message)
+		if err != nil {
+			log.Println("ERROR:", err)
+			debug.PrintStack()
+			return nil //nil return to ensure continued consumption
+		}
+		return listener(message)
+	}
 }
 
 func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize int64, respHandler func(msg string) error) func(msg string) (err error) {

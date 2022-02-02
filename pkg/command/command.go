@@ -22,7 +22,6 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/register"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"strings"
@@ -34,7 +33,7 @@ type Command struct {
 	register   *register.Register
 	config     configuration.Config
 	marshaller marshaller.Interface
-	producer   com.ProducerInterface
+	producer   interfaces.Producer
 }
 
 func New(ctx context.Context, config configuration.Config) (cmd *Command, err error) {

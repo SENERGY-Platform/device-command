@@ -19,11 +19,11 @@ package interfaces
 import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 )
 
 type Producer interface {
-	Produce(topic string, message string) (err error)
-	ProduceWithKey(topic string, key string, message string) (err error)
+	SendCommand(msg messages.ProtocolMsg) (err error)
 }
 
-type ComFactory func(ctx context.Context, config configuration.Config, responseListener func(msg string) error, errorListener func(msg string) error) (producer Producer, err error)
+type ComFactory func(ctx context.Context, config configuration.Config, responseListener func(msg messages.ProtocolMsg) error, errorListener func(msg messages.ProtocolMsg) error) (producer Producer, err error)

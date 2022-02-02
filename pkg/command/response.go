@@ -17,24 +17,12 @@
 package command
 
 import (
-	"encoding/json"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
-	"log"
 	"net/http"
-	"runtime/debug"
 )
 
-func (this *Command) HandleTaskResponse(msg string) (err error) {
-	var message messages.ProtocolMsg
-	err = json.Unmarshal([]byte(msg), &message)
-	if err != nil {
-		log.Println("ERROR:", err)
-		debug.PrintStack()
-		this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, "unable interpret response message")
-		return nil
-	}
-
+func (this *Command) HandleTaskResponse(message messages.ProtocolMsg) (err error) {
 	var output interface{}
 	if message.Metadata.OutputCharacteristic != model.NullCharacteristic.Id {
 		output, err = this.marshaller.UnmarshalFromServiceAndProtocol(message.Metadata.OutputCharacteristic, message.Metadata.Service, message.Metadata.Protocol, message.Response.Output, message.Metadata.ContentVariableHints)
@@ -43,19 +31,11 @@ func (this *Command) HandleTaskResponse(msg string) (err error) {
 			return nil
 		}
 	}
-
 	this.register.Complete(message.TaskInfo.TaskId, http.StatusOK, output)
 	return
 }
 
-func (this *Command) ErrorMessageHandler(msg string) error {
-	var message messages.ProtocolMsg
-	err := json.Unmarshal([]byte(msg), &message)
-	if err != nil {
-		log.Println("ERROR:", err)
-		debug.PrintStack()
-		return nil
-	}
-	this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, msg)
+func (this *Command) ErrorMessageHandler(message messages.ProtocolMsg) error {
+	this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, message.Response.Output)
 	return nil
 }

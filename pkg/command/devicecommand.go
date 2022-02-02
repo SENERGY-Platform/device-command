@@ -17,7 +17,6 @@
 package command
 
 import (
-	"encoding/json"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
@@ -117,13 +116,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		Trace: []messages.Trace{},
 	}
 
-	topic := protocolMessage.Metadata.Protocol.Handler
-	key := protocolMessage.Metadata.Device.Id
-	msg, err := json.Marshal(protocolMessage)
-	if err != nil {
-		return http.StatusInternalServerError, err.Error()
-	}
-	err = this.producer.ProduceWithKey(topic, key, string(msg))
+	err = this.producer.SendCommand(protocolMessage)
 	if err != nil {
 		log.Println("ERROR:", err)
 		this.register.Complete(taskId, http.StatusInternalServerError, "unable to produce message")

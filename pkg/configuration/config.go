@@ -47,11 +47,7 @@ type Config struct {
 	PermissionsUrl     string `json:"permissions_url"`
 	GroupScheduler     string `json:"group_scheduler"`
 
-	HttpCommandConsumerPort string `json:"http_command_consumer_port"`
-	HttpCommandConsumerSync bool   `json:"http_command_consumer_sync"`
-	MetadataResponseTo      string `json:"metadata_response_to"`
-	DisableKafkaConsumer    bool   `json:"disable_kafka_consumer"`
-	DisableHttpConsumer     bool   `json:"disable_http_consumer"`
+	MetadataResponseTo string `json:"metadata_response_to"`
 
 	AsyncFlushFrequency string `json:"async_flush_frequency"`
 	AsyncCompression    string `json:"async_compression"`
@@ -68,6 +64,8 @@ type Config struct {
 
 	MetadataErrorTo string `json:"metadata_error_to"`
 	ErrorTopic      string `json:"error_topic"`
+
+	TopicSuffixForScaling string `json:"topic_suffix_for_scaling"`
 
 	DeviceRepoCacheSizeInMb int                            `json:"device_repo_cache_size_in_mb"`
 	KafkaTopicConfigs       map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`

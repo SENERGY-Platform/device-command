@@ -22,14 +22,14 @@ import (
 	"fmt"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
+	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
 	"github.com/SENERGY-Platform/external-task-worker/util"
 	"log"
 )
 
 func ComFactory(ctx context.Context, config configuration.Config, responseListener func(msg string) error, errorListener func(msg string) error) (producer interfaces.Producer, err error) {
-	comFactory := comswitch.Factory
+	comFactory := kafka.Factory
 	libConfig := createLibConfig(config)
 	if config.ResponseWorkerCount > 1 {
 		err = comFactory.NewConsumer(ctx, libConfig, getQueuedResponseHandler(ctx, config.ResponseWorkerCount, config.ResponseWorkerCount, responseListener), errorListener)
@@ -86,11 +86,7 @@ func createLibConfig(config configuration.Config) util.Config {
 		PermissionsUrl:                  config.PermissionsUrl,
 		MarshallerUrl:                   config.MarshallerUrl,
 		GroupScheduler:                  config.GroupScheduler,
-		HttpCommandConsumerPort:         config.HttpCommandConsumerPort,
-		HttpCommandConsumerSync:         config.HttpCommandConsumerSync,
 		MetadataResponseTo:              config.MetadataResponseTo,
-		DisableKafkaConsumer:            config.DisableKafkaConsumer,
-		DisableHttpConsumer:             config.DisableHttpConsumer,
 		AsyncFlushFrequency:             config.AsyncFlushFrequency,
 		AsyncCompression:                config.AsyncCompression,
 		SyncCompression:                 config.SyncCompression,

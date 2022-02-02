@@ -48,6 +48,7 @@ func NewWithFactories(ctx context.Context, config configuration.Config, comFacto
 			cancel()
 		}
 	}()
+	config = ensureScalingSuffix(config)
 	cmd = &Command{
 		config:   config,
 		register: register.New(config.DefaultTimeoutDuration, config.Debug),
@@ -69,6 +70,14 @@ func NewWithFactories(ctx context.Context, config configuration.Config, comFacto
 		return cmd, err
 	}
 	return cmd, nil
+}
+
+func ensureScalingSuffix(config configuration.Config) configuration.Config {
+	config.MetadataErrorTo = config.MetadataErrorTo + config.TopicSuffixForScaling
+	config.MetadataResponseTo = config.MetadataResponseTo + config.TopicSuffixForScaling
+	config.ErrorTopic = config.ErrorTopic + config.TopicSuffixForScaling
+	config.ResponseTopic = config.ResponseTopic + config.TopicSuffixForScaling
+	return config
 }
 
 func isMeasuringFunctionId(id string) bool {

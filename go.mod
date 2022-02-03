@@ -34,9 +34,11 @@ require (
 	github.com/eapache/go-resiliency v1.1.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/eclipse/paho.mqtt.golang v1.3.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/klauspost/compress v1.9.8 // indirect
 	github.com/lib/pq v1.10.2 // indirect

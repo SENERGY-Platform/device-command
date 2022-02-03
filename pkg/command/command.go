@@ -19,6 +19,7 @@ package command
 import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/register"
@@ -37,7 +38,11 @@ type Command struct {
 }
 
 func New(ctx context.Context, config configuration.Config) (cmd *Command, err error) {
-	return NewWithFactories(ctx, config, cloud.ComFactory, cloud.MarshallerFactory, cloud.IotFactory, cloud.TimescaleFactory)
+	com := cloud.ComFactory
+	if config.ComImpl == "mgw" {
+		com = mgw.ComFactory
+	}
+	return NewWithFactories(ctx, config, com, cloud.MarshallerFactory, cloud.IotFactory, cloud.TimescaleFactory)
 }
 
 func NewWithFactories(ctx context.Context, config configuration.Config, comFactory interfaces.ComFactory, marshallerFactory interfaces.MarshallerFactory, iotFactory interfaces.IotFactory, timescaleFactory interfaces.TimescaleFactory) (cmd *Command, err error) {

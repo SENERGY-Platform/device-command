@@ -69,6 +69,14 @@ type Config struct {
 
 	DeviceRepoCacheSizeInMb int                            `json:"device_repo_cache_size_in_mb"`
 	KafkaTopicConfigs       map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`
+
+	MgwCorrelationIdPrefix string `json:"mgw_correlation_id_prefix"`
+	MgwProtocolSegment     string `json:"mgw_protocol_segment"`
+	MgwMqttBroker          string `json:"mgw_mqtt_broker"`
+	MgwMqttClientId        string `json:"mgw_mqtt_client_id"`
+	MgwMqttUser            string `json:"mgw_mqtt_user"`
+	MgwMqttPw              string `json:"mgw_mqtt_pw"`
+	ComImpl                string `json:"com_impl"` //"mgw" || "cloud" defaults to "cloud"
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

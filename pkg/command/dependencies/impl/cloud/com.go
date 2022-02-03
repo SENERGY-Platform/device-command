@@ -25,7 +25,6 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/external-task-worker/util"
 	"log"
@@ -106,7 +105,6 @@ func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize 
 }
 
 func createLibConfig(config configuration.Config) util.Config {
-	devicerepository.L1Size = config.DeviceRepoCacheSizeInMb * 1024 * 1024
 	return util.Config{
 		Debug:                           config.Debug,
 		DeviceRepoUrl:                   config.DeviceRepositoryUrl,

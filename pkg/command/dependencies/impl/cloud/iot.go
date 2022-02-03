@@ -33,16 +33,24 @@ import (
 )
 
 type Iot struct {
-	cache  *devicerepository.Cache
-	config configuration.Config
+	cache        Cache
+	config       configuration.Config
+	cacheDevices bool //no caching to ensure access check in repository
+}
+
+type Cache interface {
+	Use(key string, getter func() (interface{}, error), result interface{}) (err error)
+	Set(key string, value []byte)
+	Get(key string) (value []byte, err error)
 }
 
 func IotFactory(ctx context.Context, config configuration.Config) (interfaces.Iot, error) {
-	return NewIot(config), nil
+	devicerepository.L1Size = config.DeviceRepoCacheSizeInMb * 1024 * 1024
+	return NewIot(config, &CacheImpl{parent: devicerepository.NewCache()}, false), nil
 }
 
-func NewIot(config configuration.Config) *Iot {
-	return &Iot{config: config, cache: devicerepository.NewCache()}
+func NewIot(config configuration.Config, cache Cache, cacheDevices bool) *Iot {
+	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices}
 }
 
 func (this *Iot) GetFunction(token string, id string) (result model.Function, err error) {
@@ -70,7 +78,13 @@ func (this *Iot) getConcept(token string, id string) (result model.Concept, err 
 }
 
 func (this *Iot) GetDevice(token string, id string) (result model.Device, err error) {
-	return this.getDevice(token, id) //no caching to ensure access check in repository
+	if this.cacheDevices {
+		err = this.cache.Use("device."+id, func() (interface{}, error) {
+			return this.getDevice(token, id)
+		}, &result)
+		return result, err
+	}
+	return this.getDevice(token, id)
 }
 
 func (this *Iot) getDevice(token string, id string) (result model.Device, err error) {
@@ -111,11 +125,11 @@ func (this *Iot) GetService(token string, device model.Device, id string) (resul
 }
 
 func (this *Iot) getServiceFromCache(id string) (service model.Service, err error) {
-	item, err := this.cache.Get("service." + id)
+	value, err := this.cache.Get("service." + id)
 	if err != nil {
 		return service, err
 	}
-	err = json.Unmarshal(item.Value, &service)
+	err = json.Unmarshal(value, &service)
 	return
 }
 

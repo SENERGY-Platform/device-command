@@ -42,7 +42,15 @@ func New(ctx context.Context, config configuration.Config) (cmd *Command, err er
 	if config.ComImpl == "mgw" {
 		com = mgw.ComFactory
 	}
-	return NewWithFactories(ctx, config, com, cloud.MarshallerFactory, cloud.IotFactory, cloud.TimescaleFactory)
+	iot := cloud.IotFactory
+	if config.UseIotFallback {
+		iot = mgw.IotFactory
+	}
+	m := cloud.MarshallerFactory
+	if config.MarshallerImpl == "mgw" {
+		m = mgw.MarshallerFactory
+	}
+	return NewWithFactories(ctx, config, com, m, iot, cloud.TimescaleFactory)
 }
 
 func NewWithFactories(ctx context.Context, config configuration.Config, comFactory interfaces.ComFactory, marshallerFactory interfaces.MarshallerFactory, iotFactory interfaces.IotFactory, timescaleFactory interfaces.TimescaleFactory) (cmd *Command, err error) {

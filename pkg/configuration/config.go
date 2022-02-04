@@ -65,7 +65,7 @@ type Config struct {
 	MetadataErrorTo string `json:"metadata_error_to"`
 	ErrorTopic      string `json:"error_topic"`
 
-	TopicSuffixForScaling string `json:"topic_suffix_for_scaling"`
+	TopicSuffixForScaling string `json:"topic_suffix_for_scaling"` //only for kafka & cloud
 
 	DeviceRepoCacheSizeInMb int                            `json:"device_repo_cache_size_in_mb"`
 	KafkaTopicConfigs       map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`

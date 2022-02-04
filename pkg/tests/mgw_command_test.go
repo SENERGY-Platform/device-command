@@ -17,39 +17,27 @@
 package tests
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/mqtt"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
-	"github.com/Shopify/sarama"
-	"io"
-	"log"
-	"net"
 	"net/http"
-	"os"
-	"strconv"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 )
 
-func TestCommandUnscaled(t *testing.T) {
-	testCommand("")(t)
+func TestMgwCommand(t *testing.T) {
+	testMgwCommand()(t)
 }
 
-func TestCommandScaled(t *testing.T) {
-	testCommand("scalingSuffix")(t)
-}
-
-func testCommand(scalingSuffix string) func(t *testing.T) {
+func testMgwCommand() func(t *testing.T) {
 	return func(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		defer wg.Wait()
@@ -60,8 +48,11 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		config.TopicSuffixForScaling = scalingSuffix
 		config.Debug = true
+		config.ComImpl = "mgw"
+		config.MarshallerImpl = "mgw"
+		config.UseIotFallback = true
+		config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
 
 		config.ServerPort, err = GetFreePort()
 		if err != nil {
@@ -146,110 +137,89 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			return
 		}
 
-		config, err = kafkaEnv(config, ctx, wg)
+		config, err = mqttEnv(config, ctx, wg)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		time.Sleep(1 * time.Second)
 
-		//connector mock
-		maxWait, err := time.ParseDuration(config.KafkaConsumerMaxWait)
+		mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		producer, err := kafka.PrepareProducerWithConfig(ctx, config.KafkaUrl, kafka.ProducerConfig{
-			AsyncFlushFrequency: 100 * time.Millisecond,
-			AsyncCompression:    sarama.CompressionNone,
-			SyncCompression:     sarama.CompressionNone,
-			Sync:                config.Sync,
-			SyncIdempotent:      config.SyncIdempotent,
-			PartitionNum:        int(config.PartitionNum),
-			ReplicationFactor:   int(config.ReplicationFactor),
-			AsyncFlushMessages:  int(config.AsyncFlushMessages),
-			TopicConfigMap:      config.KafkaTopicConfigs,
-		})
-		if err != nil {
-			t.Log(config.KafkaUrl)
-			t.Error(err)
-			return
-		}
-		producer.Log(log.New(os.Stdout, "[KAFKA-PRODUCER] ", 0))
 
-		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
-			KafkaUrl:       config.KafkaUrl,
-			GroupId:        "test-connector-mock",
-			Topic:          "connector",
-			MinBytes:       int(config.KafkaConsumerMinBytes),
-			MaxBytes:       int(config.KafkaConsumerMaxBytes),
-			MaxWait:        maxWait,
-			TopicConfigMap: config.KafkaTopicConfigs,
-		}, func(_ string, msg []byte, time time.Time) error {
-			t.Log(string(msg))
-			message := messages.ProtocolMsg{}
-			err := json.Unmarshal(msg, &message)
-			if err != nil {
-				t.Error(err)
-				return nil
-			}
-			switch message.Metadata.Service.Id {
-			case "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033":
-				message.Response.Output = map[string]string{"data": `{"value": "clear", "lastUpdate": 0, "lastUpdate_unit": "unit"}`}
-			case "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3":
-				if message.Request.Input["data"] != "21" {
-					t.Error(message.Request.Input)
-				}
-			case "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1":
-				message.Response.Output = map[string]string{"data": `{"value": 13, "lastUpdate": 42}`}
-			case "urn:infai:ses:service:4b6c4567-f256-4dbd-a562-d13442ad4530":
-				//create timeout
-				return nil
-			case "urn:infai:ses:service:36fd778e-b04d-4d72-bed5-1b77ed1164b9":
-				//create timeout
-				return nil
-			case "urn:infai:ses:service:1199edee-fbf7-44fb-9228-9a9db69bbdd4":
-				message.Response.Output = map[string]string{"data": `{"brightness": 65, "hue": 176, "saturation": 70, "kelvin": 0, "on": true, "status": 200}`}
-			case "urn:infai:ses:service:1b0ef253-16f7-4b65-8a15-fe79fccf7e70":
-				input := map[string]float64{}
-				err = json.Unmarshal([]byte(message.Request.Input["data"]), &input)
+		err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+			t.Log(topic, string(payload))
+			if strings.HasPrefix(topic, "command/") {
+				msg := mgw.Command{}
+				err = json.Unmarshal(payload, &msg)
 				if err != nil {
 					t.Error(err)
-					return nil
+					return
 				}
-				//values are truncated to integers, not rounded
-				if input["brightness"] != float64(65) {
-					t.Error(message.Request.Input)
+				parts := strings.Split(topic, "/")
+				deviceLocalId := parts[1]
+				serviceLocalId := parts[2]
+				t.Log(deviceLocalId, serviceLocalId)
+				switch serviceLocalId {
+				case "113-1-5:get":
+					msg.Data = `{"value": "clear", "lastUpdate": 0, "lastUpdate_unit": "unit"}`
+				case "67-1-1":
+					if msg.Data != "21" {
+						t.Error(msg.Data)
+					}
+					msg.Data = ""
+				case "49-1-1:get":
+					msg.Data = `{"value": 13, "lastUpdate": 42}`
+				case "67-1-1:get":
+					//create timeout
+					return
+				case "128-1-0:get":
+					//create timeout
+					return
+				case "getStatus":
+					msg.Data = `{"brightness": 65, "hue": 176, "saturation": 70, "kelvin": 0, "on": true, "status": 200}`
+				case "setColor":
+					input := map[string]float64{}
+					err = json.Unmarshal([]byte(msg.Data), &input)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					//values are truncated to integers, not rounded
+					if input["brightness"] != float64(65) {
+						t.Error(msg.Data)
+					}
+					if input["hue"] != float64(176) {
+						t.Error(msg.Data)
+					}
+					if input["saturation"] != float64(70) {
+						t.Error(msg.Data)
+					}
+					if input["duration"] != float64(1) {
+						t.Error(msg.Data)
+					}
+					msg.Data = ""
+				default:
+					t.Error("unknown service-id", serviceLocalId)
+					return
 				}
-				if input["hue"] != float64(176) {
-					t.Error(message.Request.Input)
+				resp, err := json.Marshal(msg)
+				if err != nil {
+					t.Error(err)
+					return
 				}
-				if input["saturation"] != float64(70) {
-					t.Error(message.Request.Input)
+				err = mqttClient.Publish(strings.Join([]string{"response", deviceLocalId, serviceLocalId}, "/"), 2, false, resp)
+				if err != nil {
+					t.Error(err)
+					return
 				}
-				if input["duration"] != float64(1) {
-					t.Error(message.Request.Input)
-				}
-			default:
-				t.Error("unknown service-id", message.Metadata.Service.Id)
-				return nil
 			}
-			resp, err := json.Marshal(message)
-			if err != nil {
-				t.Error(err)
-				return nil
-			}
-			err = producer.ProduceWithKey(message.Metadata.ResponseTo, "key", string(resp))
-			if err != nil {
-				t.Error(err)
-				return nil
-			}
-			return nil
-		}, func(err error) {
-			t.Error(err)
 		})
 
-		cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, cloud.TimescaleFactory)
+		cmd, err := command.New(ctx, config)
 		if err != nil {
 			t.Error(err)
 			return
@@ -285,7 +255,7 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			FunctionId: "foobar",
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
-		}, 500, `"unable to load function: not found"`))
+		}, 500, `"unable to load function: value not found in fallback: function.foobar"`))
 
 		t.Run("device color", sendCommand(config, api.CommandMessage{
 			FunctionId: "urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599",
@@ -364,7 +334,7 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 				DeviceId:   "color_event",
 				ServiceId:  "urn:infai:ses:service:color_event",
 			},
-		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]}]`))
+		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: value not found in fallback: function.foobar"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]}]`))
 
 		t.Run("new timestamp", sendCommandBatch(config, api.BatchRequest{
 			{
@@ -374,95 +344,4 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			},
 		}, 200, `[{"status_code":200,"message":["1970-01-01T01:00:00+01:00"]}]`))
 	}
-}
-
-func sendCommandBatch(config configuration.Config, commandMessage api.BatchRequest, expectedCode int, expectedContent string) func(t *testing.T) {
-	return func(t *testing.T) {
-		buff := &bytes.Buffer{}
-		err := json.NewEncoder(buff).Encode(commandMessage)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands/batch?timeout=5s", buff)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		req.Header.Set("Authorization", testToken)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		defer resp.Body.Close()
-		actualContent, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if resp.StatusCode != expectedCode {
-			t.Error(resp.StatusCode, string(actualContent))
-			return
-		}
-		if strings.TrimSpace(string(actualContent)) != expectedContent {
-			t.Error("\n" + expectedContent + "\n" + string(actualContent))
-		}
-	}
-}
-
-func sendCommand(config configuration.Config, commandMessage api.CommandMessage, expectedCode int, expectedContent string) func(t *testing.T) {
-	return func(t *testing.T) {
-		buff := &bytes.Buffer{}
-		err := json.NewEncoder(buff).Encode(commandMessage)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands?timeout=5s", buff)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		req.Header.Set("Authorization", testToken)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		defer resp.Body.Close()
-		actualContent, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		if resp.StatusCode != expectedCode {
-			t.Error(resp.StatusCode, string(actualContent))
-			return
-		}
-		if strings.TrimSpace(string(actualContent)) != expectedContent {
-			t.Error("\n" + expectedContent + "\n" + string(actualContent))
-		}
-	}
-}
-
-const testToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwOGM0N2E4OC0yYzc5LTQyMGYtODEwNC02NWJkOWViYmU0MWUiLCJleHAiOjE1NDY1MDcyMzMsIm5iZiI6MCwiaWF0IjoxNTQ2NTA3MTczLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwMDEvYXV0aC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiZnJvbnRlbmQiLCJzdWIiOiJ0ZXN0T3duZXIiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmcm9udGVuZCIsIm5vbmNlIjoiOTJjNDNjOTUtNzViMC00NmNmLTgwYWUtNDVkZDk3M2I0YjdmIiwiYXV0aF90aW1lIjoxNTQ2NTA3MDA5LCJzZXNzaW9uX3N0YXRlIjoiNWRmOTI4ZjQtMDhmMC00ZWI5LTliNjAtM2EwYWUyMmVmYzczIiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJ1c2VyIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibWFzdGVyLXJlYWxtIjp7InJvbGVzIjpbInZpZXctcmVhbG0iLCJ2aWV3LWlkZW50aXR5LXByb3ZpZGVycyIsIm1hbmFnZS1pZGVudGl0eS1wcm92aWRlcnMiLCJpbXBlcnNvbmF0aW9uIiwiY3JlYXRlLWNsaWVudCIsIm1hbmFnZS11c2VycyIsInF1ZXJ5LXJlYWxtcyIsInZpZXctYXV0aG9yaXphdGlvbiIsInF1ZXJ5LWNsaWVudHMiLCJxdWVyeS11c2VycyIsIm1hbmFnZS1ldmVudHMiLCJtYW5hZ2UtcmVhbG0iLCJ2aWV3LWV2ZW50cyIsInZpZXctdXNlcnMiLCJ2aWV3LWNsaWVudHMiLCJtYW5hZ2UtYXV0aG9yaXphdGlvbiIsIm1hbmFnZS1jbGllbnRzIiwicXVlcnktZ3JvdXBzIl19LCJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJyb2xlcyI6WyJ1c2VyIl19.ykpuOmlpzj75ecSI6cHbCATIeY4qpyut2hMc1a67Ycg`
-
-func getFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	listener, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer listener.Close()
-	return listener.Addr().(*net.TCPAddr).Port, nil
-}
-
-func GetFreePort() (string, error) {
-	temp, err := getFreePort()
-	return strconv.Itoa(temp), err
 }

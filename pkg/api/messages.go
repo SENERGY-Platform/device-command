@@ -17,6 +17,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"strconv"
 )
@@ -49,6 +51,12 @@ func (this CommandMessage) Validate() error {
 	}
 
 	return errors.New("missing device_id, service_id or group_id")
+}
+
+func (this CommandMessage) Hash() string {
+	var b bytes.Buffer
+	gob.NewEncoder(&b).Encode(this)
+	return string(b.Bytes())
 }
 
 type BatchRequest []CommandMessage

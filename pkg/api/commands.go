@@ -105,32 +105,38 @@ func runBatch(token auth.Token, command Command, batch BatchRequest, timeout str
 	wg := sync.WaitGroup{}
 	mux := sync.Mutex{}
 
+	resultIndexMap := map[string][]int{}
 	for i, cmd := range batch {
-		wg.Add(1)
-		go func(i int, cmd CommandMessage) {
-			defer wg.Done()
-			if cmd.DeviceId != "" && cmd.ServiceId != "" {
-				code, temp := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input, timeout)
-				mux.Lock()
-				defer mux.Unlock()
-				result[i] = BatchResultElement{
-					StatusCode: code,
-					Message:    temp,
-				}
-				return
-			}
+		hash := cmd.Hash()
+		resultIndexMap[hash] = append(resultIndexMap[hash], i)
+	}
+	isAlreadySend := map[string]bool{}
 
-			if cmd.GroupId != "" {
-				code, temp := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout)
+	for _, cmd := range batch {
+		hash := cmd.Hash()
+		if !isAlreadySend[hash] {
+			isAlreadySend[hash] = true
+			wg.Add(1)
+			go func(resultIndexes []int, cmd CommandMessage) {
+				defer wg.Done()
+				var code int
+				var temp interface{}
+				if cmd.DeviceId != "" && cmd.ServiceId != "" {
+					code, temp = command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input, timeout)
+				} else if cmd.GroupId != "" {
+					code, temp = command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout)
+				}
 				mux.Lock()
 				defer mux.Unlock()
-				result[i] = BatchResultElement{
-					StatusCode: code,
-					Message:    temp,
+				for _, index := range resultIndexes {
+					result[index] = BatchResultElement{
+						StatusCode: code,
+						Message:    temp,
+					}
 				}
 				return
-			}
-		}(i, cmd)
+			}(resultIndexMap[hash], cmd)
+		}
 	}
 	wg.Wait()
 	return result

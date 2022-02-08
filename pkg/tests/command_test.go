@@ -177,6 +177,8 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 		}
 		producer.Log(log.New(os.Stdout, "[KAFKA-PRODUCER] ", 0))
 
+		serviceCallCount := map[string]int{}
+
 		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
 			KafkaUrl:       config.KafkaUrl,
 			GroupId:        "test-connector-mock",
@@ -201,6 +203,7 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 					t.Error(message.Request.Input)
 				}
 			case "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1":
+				serviceCallCount[message.Metadata.Service.Id] = serviceCallCount[message.Metadata.Service.Id] + 1
 				message.Response.Output = map[string]string{"data": `{"value": 13, "lastUpdate": 42}`}
 			case "urn:infai:ses:service:4b6c4567-f256-4dbd-a562-d13442ad4530":
 				//create timeout
@@ -364,7 +367,23 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 				DeviceId:   "color_event",
 				ServiceId:  "urn:infai:ses:service:color_event",
 			},
-		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]}]`))
+			{
+				FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
+				Input:      21,
+				DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+				ServiceId:  "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
+			},
+			{
+				FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+				DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+				ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+			},
+			{
+				FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+				DeviceId:   "color_event",
+				ServiceId:  "urn:infai:ses:service:color_event",
+			},
+		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":["on"]}]`))
 
 		t.Run("new timestamp", sendCommandBatch(config, api.BatchRequest{
 			{
@@ -373,6 +392,12 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 				ServiceId:  "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033",
 			},
 		}, 200, `[{"status_code":200,"message":["1970-01-01T01:00:00+01:00"]}]`))
+
+		t.Run("check callcount", func(t *testing.T) {
+			if serviceCallCount["urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1"] != 5 {
+				t.Error(serviceCallCount)
+			}
+		})
 	}
 }
 

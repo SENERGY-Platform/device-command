@@ -36,7 +36,9 @@ type Config struct {
 	MarshallerUrl       string `json:"marshaller_url"`
 	DeviceManagerUrl    string `json:"device_manager_url"`
 	DeviceRepositoryUrl string `json:"device_repository_url"`
+
 	TimescaleWrapperUrl string `json:"timescale_wrapper_url"`
+	TimescaleImpl       string `json:"timescale_impl"` //"mgw" || "cloud" defaults to "cloud"
 
 	KafkaUrl               string        `json:"kafka_url"`
 	DefaultTimeout         string        `json:"default_timeout"`

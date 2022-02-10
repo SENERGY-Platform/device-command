@@ -138,8 +138,8 @@ func createTimescaleRequest(device model.Device, service model.Service) (result 
 	}
 	for _, path := range paths {
 		result = append(result, interfaces.TimescaleRequest{
-			DeviceId:   device.Id,
-			ServiceId:  service.Id,
+			Device:     device,
+			Service:    service,
 			ColumnName: path,
 		})
 	}

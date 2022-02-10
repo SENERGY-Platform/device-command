@@ -52,6 +52,7 @@ func testMgwCommand() func(t *testing.T) {
 		config.ComImpl = "mgw"
 		config.MarshallerImpl = "mgw"
 		config.UseIotFallback = true
+		config.TimescaleImpl = "mgw"
 		config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
 
 		config.ServerPort, err = GetFreePort()
@@ -61,13 +62,13 @@ func testMgwCommand() func(t *testing.T) {
 		}
 
 		config, err = timescaleEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
-			"color_event": {
-				"urn:infai:ses:service:color_event": {
-					"struct.hue":        176,
-					"struct.saturation": 70,
-					"struct.brightness": 65,
-					"struct.on":         true,
-					"struct.status":     200,
+			"color_event_lid": {
+				"getStatus": {
+					"hue":        176,
+					"saturation": 70,
+					"brightness": 65,
+					"on":         true,
+					"status":     200,
 				},
 			},
 		})
@@ -116,7 +117,7 @@ func testMgwCommand() func(t *testing.T) {
 				},
 				"/devices/color_event": model.Device{
 					Id:           "color_event",
-					LocalId:      "color_event",
+					LocalId:      "color_event_lid",
 					Name:         "color_event",
 					DeviceTypeId: "urn:infai:ses:device-type:color_event",
 				},

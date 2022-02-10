@@ -50,7 +50,12 @@ func New(ctx context.Context, config configuration.Config) (cmd *Command, err er
 	if config.MarshallerImpl == "mgw" {
 		m = mgw.MarshallerFactory
 	}
-	return NewWithFactories(ctx, config, com, m, iot, cloud.TimescaleFactory)
+	t := cloud.TimescaleFactory
+	if config.TimescaleImpl == "mgw" {
+		t = mgw.TimescaleFactory
+	}
+
+	return NewWithFactories(ctx, config, com, m, iot, t)
 }
 
 func NewWithFactories(ctx context.Context, config configuration.Config, comFactory interfaces.ComFactory, marshallerFactory interfaces.MarshallerFactory, iotFactory interfaces.IotFactory, timescaleFactory interfaces.TimescaleFactory) (cmd *Command, err error) {

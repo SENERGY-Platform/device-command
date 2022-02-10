@@ -27,10 +27,16 @@ import (
 	"sync"
 )
 
+type TimescaleMockRequest struct {
+	DeviceId   string
+	ServiceId  string
+	ColumnName string
+}
+
 func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, values map[string]map[string]map[string]interface{}) (config configuration.Config, err error) {
 	config = initialConfig
 
-	get := func(req interfaces.TimescaleRequest) (value interface{}) {
+	get := func(req TimescaleMockRequest) (value interface{}) {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Println(err)
@@ -42,7 +48,7 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		msg := []interfaces.TimescaleRequest{}
+		msg := []TimescaleMockRequest{}
 		err = json.NewDecoder(request.Body).Decode(&msg)
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)

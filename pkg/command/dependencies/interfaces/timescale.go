@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 )
 
 type Timescale interface {
@@ -28,8 +29,8 @@ type Timescale interface {
 type TimescaleFactory func(ctx context.Context, config configuration.Config) (Timescale, error)
 
 type TimescaleRequest struct {
-	DeviceId   string
-	ServiceId  string
+	Device     model.Device
+	Service    model.Service
 	ColumnName string
 }
 

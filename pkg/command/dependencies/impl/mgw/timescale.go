@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package cloud
+package mgw
 
 import (
 	"bytes"
@@ -38,8 +38,8 @@ func TimescaleFactory(ctx context.Context, config configuration.Config) (interfa
 	return NewTimescale(config.TimescaleWrapperUrl), nil
 }
 
-func NewTimescale(timescaleWrapperUrl string) *Timescale {
-	return &Timescale{TimescaleWrapperUrl: timescaleWrapperUrl}
+func NewTimescale(TimescaleUrl string) *Timescale {
+	return &Timescale{TimescaleWrapperUrl: TimescaleUrl}
 }
 
 func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleRequest) (result []interfaces.TimescaleResponse, err error) {
@@ -72,12 +72,23 @@ func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleReq
 func (this *Timescale) castRequest(request []interfaces.TimescaleRequest) (result []TimescaleRequest) {
 	for _, r := range request {
 		result = append(result, TimescaleRequest{
-			DeviceId:   r.Device.Id,
-			ServiceId:  r.Service.Id,
-			ColumnName: r.ColumnName,
+			DeviceId:   r.Device.LocalId,
+			ServiceId:  r.Service.LocalId,
+			ColumnName: this.castPath(r.ColumnName),
 		})
 	}
 	return
+}
+
+func (this *Timescale) castPath(path string) string {
+	if path == "" {
+		return path
+	}
+	parts := strings.Split(path, ".")
+	if len(parts) == 0 {
+		return path
+	}
+	return strings.Join(parts[1:], ".")
 }
 
 type TimescaleRequest struct {

@@ -19,6 +19,7 @@ package command
 import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/external-task-worker/util"
 	"github.com/google/uuid"
@@ -29,15 +30,15 @@ import (
 	"time"
 )
 
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}, timeout string) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, input, timeout)
+func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string) (code int, resp interface{}) {
+	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout)
 	if code == http.StatusOK {
 		resp = []interface{}{resp}
 	}
 	return code, resp
 }
 
-func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, input interface{}, timeout string) (code int, resp interface{}) {
+func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string) (code int, resp interface{}) {
 	timeoutDuration := this.config.DefaultTimeoutDuration
 	var err error
 	if timeout != "" {
@@ -75,19 +76,48 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
 	if service.Interaction == model.EVENT && isMeasuringFunctionId(functionId) {
-		return this.GetLastEventValue(token, device, service, protocol, characteristicId)
+		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId)
+	}
+
+	var aspectNode *model.AspectNode
+	if aspectId != "" {
+		temp, err := this.iot.GetAspectNode(token.Jwt(), aspectId)
+		if err != nil {
+			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error()
+		}
+		aspectNode = &temp
 	}
 
 	var inputCharacteristicId string
 	var outputCharacteristicId string
 
+	var inputFunctionId string
+	var outputFunctionId string
+
+	var inputAspectNode *model.AspectNode
+	var outputAspectNode *model.AspectNode
+
+	data := []marshaller.MarshallingV2RequestData{}
+
 	if isControllingFunction(function) {
 		inputCharacteristicId = characteristicId
+		inputFunctionId = functionId
+		data = []marshaller.MarshallingV2RequestData{
+			{
+				Value:            input,
+				CharacteristicId: inputCharacteristicId,
+				FunctionId:       inputFunctionId,
+				AspectNode:       inputAspectNode,
+			},
+		}
+		inputAspectNode = aspectNode
 	} else {
 		outputCharacteristicId = characteristicId
+		outputFunctionId = functionId
+		outputAspectNode = aspectNode
 	}
 
-	marshalledInput, err := this.marshaller.MarshalFromServiceAndProtocol(inputCharacteristicId, service, protocol, input, nil)
+	marshalledInput, err := this.marshaller.MarshalV2(service, protocol, data)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to marshal input: " + err.Error()
 	}
@@ -105,9 +135,12 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 			Input: marshalledInput,
 		},
 		Metadata: messages.Metadata{
+			Version:              3,
 			Device:               device,
 			Service:              service,
 			Protocol:             protocol,
+			OutputFunctionId:     outputFunctionId,
+			OutputAspectNode:     outputAspectNode,
 			InputCharacteristic:  inputCharacteristicId,
 			OutputCharacteristic: outputCharacteristicId,
 			ResponseTo:           this.config.MetadataResponseTo,

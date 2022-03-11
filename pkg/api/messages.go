@@ -24,7 +24,8 @@ import (
 )
 
 type CommandMessage struct {
-	FunctionId string      `json:"function_id"` //mandatory
+	FunctionId string      `json:"function_id"`         //mandatory
+	AspectId   string      `json:"aspect_id,omitempty"` //optional
 	Input      interface{} `json:"input"`
 
 	//device command
@@ -32,8 +33,8 @@ type CommandMessage struct {
 	ServiceId string `json:"service_id,omitempty"`
 
 	//group command
-	GroupId       string `json:"group_id,omitempty"`
-	AspectId      string `json:"aspect_id,omitempty"`
+	GroupId string `json:"group_id,omitempty"`
+
 	DeviceClassId string `json:"device_class_id,omitempty"`
 }
 

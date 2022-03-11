@@ -82,6 +82,8 @@ type Config struct {
 	MarshallerImpl         string `json:"marshaller_impl"` //"mgw" || "cloud" defaults to "cloud"
 	UseIotFallback         bool   `json:"use_iot_fallback"`
 	IotFallbackFile        string `json:"iot_fallback_file"`
+
+	MgwConceptRepoRefreshInterval int64 `json:"mgw_concept_repo_refresh_interval"` //in seconds
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

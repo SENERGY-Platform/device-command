@@ -78,7 +78,7 @@ func NewWithFactories(ctx context.Context, config configuration.Config, comFacto
 	if err != nil {
 		return cmd, err
 	}
-	cmd.marshaller, err = marshallerFactory(ctx, config)
+	cmd.marshaller, err = marshallerFactory(ctx, config, cmd.iot)
 	if err != nil {
 		return cmd, err
 	}

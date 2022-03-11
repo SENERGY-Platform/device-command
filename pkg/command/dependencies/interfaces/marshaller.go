@@ -26,6 +26,9 @@ import (
 type Marshaller interface {
 	MarshalFromServiceAndProtocol(characteristicId string, service model.Service, protocol model.Protocol, characteristicData interface{}, configurables []marshaller.Configurable) (result map[string]string, err error)
 	UnmarshalFromServiceAndProtocol(characteristicId string, service model.Service, protocol model.Protocol, message map[string]string, hints []string) (characteristicData interface{}, err error)
+
+	MarshalV2(service model.Service, protocol model.Protocol, data []marshaller.MarshallingV2RequestData) (result map[string]string, err error)
+	UnmarshalV2(request marshaller.UnmarshallingV2Request) (characteristicData interface{}, err error)
 }
 
-type MarshallerFactory func(ctx context.Context, config configuration.Config) (Marshaller, error)
+type MarshallerFactory func(ctx context.Context, config configuration.Config, iot Iot) (Marshaller, error)

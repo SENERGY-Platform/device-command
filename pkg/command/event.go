@@ -21,6 +21,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/serialization"
 	"log"
@@ -29,12 +30,20 @@ import (
 	"strings"
 )
 
-func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string) (code int, result interface{}) {
+func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string) (code int, result interface{}) {
 	output, err := this.getLastEventMessage(token, device, service, protocol)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to get event value: " + err.Error()
 	}
-	temp, err := this.marshaller.UnmarshalFromServiceAndProtocol(characteristicId, service, protocol, output, nil)
+	temp, err := this.marshaller.UnmarshalV2(marshaller.UnmarshallingV2Request{
+		Service:          service,
+		Protocol:         protocol,
+		CharacteristicId: characteristicId,
+		Message:          output,
+		FunctionId:       functionId,
+		AspectNode:       model.AspectNode{},
+		AspectNodeId:     "",
+	})
 	if err != nil {
 		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()
 	}
@@ -61,7 +70,7 @@ func createEventValueFromTimescaleValues(service model.Service, protocol model.P
 		segmentValue := timescaleValue[content.ContentVariable.Name]
 		segmentName := getSegmentName(protocol, content.ProtocolSegmentId)
 		if segmentName != "" && segmentValue != nil {
-			result[segmentName], err = marshalSegmentValue(content.Serialization, segmentValue, content.ContentVariable.Name)
+			result[segmentName], err = marshalSegmentValue(string(content.Serialization), segmentValue, content.ContentVariable.Name)
 			if err != nil {
 				return result, err
 			}

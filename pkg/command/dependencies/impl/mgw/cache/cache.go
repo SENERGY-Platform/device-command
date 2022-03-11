@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2022 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package mgw
+package cache
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/fallback"
 	"github.com/coocood/freecache"
 	"log"
 )
@@ -29,7 +30,7 @@ var Debug = false
 
 type Cache struct {
 	l1       *freecache.Cache
-	fallback Fallback
+	fallback fallback.Fallback
 }
 
 type Item struct {
@@ -39,7 +40,7 @@ type Item struct {
 
 var ErrNotFound = errors.New("key not found in cache")
 
-func NewCacheWithFallback(fallback Fallback) *Cache {
+func NewCacheWithFallback(fallback fallback.Fallback) *Cache {
 	return &Cache{l1: freecache.NewCache(L1Size), fallback: fallback}
 }
 

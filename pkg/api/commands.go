@@ -50,7 +50,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 		}
 
 		if cmd.DeviceId != "" && cmd.ServiceId != "" {
-			code, result := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input, timeout)
+			code, result := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout)
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			writer.WriteHeader(code)
 			json.NewEncoder(writer).Encode(result)
@@ -122,7 +122,7 @@ func runBatch(token auth.Token, command Command, batch BatchRequest, timeout str
 				var code int
 				var temp interface{}
 				if cmd.DeviceId != "" && cmd.ServiceId != "" {
-					code, temp = command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.Input, timeout)
+					code, temp = command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout)
 				} else if cmd.GroupId != "" {
 					code, temp = command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout)
 				}

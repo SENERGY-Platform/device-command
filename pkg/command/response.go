@@ -18,14 +18,27 @@ package command
 
 import (
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"net/http"
 )
 
 func (this *Command) HandleTaskResponse(message messages.ProtocolMsg) (err error) {
 	var output interface{}
-	if message.Metadata.OutputCharacteristic != model.NullCharacteristic.Id {
-		output, err = this.marshaller.UnmarshalFromServiceAndProtocol(message.Metadata.OutputCharacteristic, message.Metadata.Service, message.Metadata.Protocol, message.Response.Output, message.Metadata.ContentVariableHints)
+	aspect := model.AspectNode{}
+	if message.Metadata.OutputAspectNode != nil {
+		aspect = *message.Metadata.OutputAspectNode
+	}
+	if message.Metadata.OutputCharacteristic != model.NullCharacteristic.Id && message.Metadata.OutputCharacteristic != "" {
+		output, err = this.marshaller.UnmarshalV2(marshaller.UnmarshallingV2Request{
+			Service:          message.Metadata.Service,
+			Protocol:         message.Metadata.Protocol,
+			CharacteristicId: message.Metadata.OutputCharacteristic,
+			Message:          message.Response.Output,
+			FunctionId:       message.Metadata.OutputFunctionId,
+			AspectNode:       aspect,
+			AspectNodeId:     aspect.Id,
+		})
 		if err != nil {
 			this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, err.Error())
 			return nil

@@ -18,21 +18,11 @@ package mgw
 
 import (
 	"context"
-	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/marshaller"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
-	"net/http"
 )
 
-func MarshallerFactory(ctx context.Context, config configuration.Config) (interfaces.Marshaller, error) {
-	return marshaller.NewMarshaller(config, MarshallerIot{}), nil
-}
-
-type MarshallerIot struct{}
-
-//this method should only be needed for a path options request, which is not relevant for this project
-func (this MarshallerIot) GetDeviceType(id string) (result model.DeviceType, err error, code int) {
-	return result, errors.New("not implemented"), http.StatusInternalServerError
+func MarshallerFactory(ctx context.Context, config configuration.Config, iot interfaces.Iot) (interfaces.Marshaller, error) {
+	return marshaller.NewMarshaller(ctx, config, iot)
 }

@@ -50,6 +50,8 @@
     "kafka_consumer_min_bytes":1000,
     "kafka_consumer_max_bytes":1000000,
 
+    "mgw_concept_repo_refresh_interval": 3600,
+
     "device_repo_cache_size_in_mb": 100,
     "kafka_topic_configs":{
         "device-command-response": [

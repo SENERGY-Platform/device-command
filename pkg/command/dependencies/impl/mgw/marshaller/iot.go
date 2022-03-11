@@ -14,21 +14,35 @@
  * limitations under the License.
  */
 
-package mgw
+package marshaller
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/cache"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/fallback"
+	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
+	"net/http"
 )
 
-func IotFactory(ctx context.Context, config configuration.Config) (result interfaces.Iot, err error) {
-	fallback, err := fallback.NewFallback(config.IotFallbackFile)
+func NewMarshallerIot(ctx context.Context, conf configuration.Config, iot interfaces.Iot) (result *MarshallerIot, err error) {
+	return &MarshallerIot{iot: iot}, nil
+}
+
+type MarshallerIot struct {
+	iot interfaces.Iot
+}
+
+func (this *MarshallerIot) GetAspectNode(id string) (result model.AspectNode, err error) {
+	temp, err := this.iot.GetAspectNode(this.iot.GetLastUsedToken(), id)
 	if err != nil {
 		return result, err
 	}
-	return cloud.NewIot(config, cache.NewCacheWithFallback(fallback), true), nil
+	err = jsonCast(temp, &result)
+	return result, err
+}
+
+//this method should only be needed for old marshal/unmarshal requests
+func (this MarshallerIot) GetDeviceType(id string) (result model.DeviceType, err error, code int) {
+	return result, errors.New("not implemented"), http.StatusInternalServerError
 }

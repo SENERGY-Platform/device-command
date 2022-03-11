@@ -23,6 +23,6 @@ import (
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 )
 
-func MarshallerFactory(ctx context.Context, config configuration.Config) (interfaces.Marshaller, error) {
+func MarshallerFactory(ctx context.Context, config configuration.Config, iot interfaces.Iot) (interfaces.Marshaller, error) {
 	return marshaller.New(config.MarshallerUrl), nil
 }

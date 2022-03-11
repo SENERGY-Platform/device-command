@@ -28,14 +28,16 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Iot struct {
-	cache        Cache
-	config       configuration.Config
-	cacheDevices bool //no caching to ensure access check in repository
+	cache         Cache
+	config        configuration.Config
+	cacheDevices  bool //no caching to ensure access check in repository
+	lastUsedToken string
 }
 
 type Cache interface {
@@ -61,7 +63,7 @@ func (this *Iot) GetFunction(token string, id string) (result model.Function, er
 }
 
 func (this *Iot) getFunction(token string, id string) (result model.Function, err error) {
-	err = GetJson(token, this.config.DeviceManagerUrl+"/functions/"+url.PathEscape(id), &result)
+	err = this.GetJson(token, this.config.DeviceManagerUrl+"/functions/"+url.PathEscape(id), &result)
 	return
 }
 
@@ -73,7 +75,7 @@ func (this *Iot) GetConcept(token string, id string) (result model.Concept, err 
 }
 
 func (this *Iot) getConcept(token string, id string) (result model.Concept, err error) {
-	err = GetJson(token, this.config.DeviceManagerUrl+"/concepts/"+url.PathEscape(id), &result)
+	err = this.GetJson(token, this.config.DeviceManagerUrl+"/concepts/"+url.PathEscape(id), &result)
 	return
 }
 
@@ -88,7 +90,7 @@ func (this *Iot) GetDevice(token string, id string) (result model.Device, err er
 }
 
 func (this *Iot) getDevice(token string, id string) (result model.Device, err error) {
-	err = GetJson(token, this.config.DeviceRepositoryUrl+"/devices/"+url.QueryEscape(id), &result)
+	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/devices/"+url.QueryEscape(id), &result)
 	return
 }
 
@@ -100,7 +102,7 @@ func (this *Iot) GetProtocol(token string, id string) (result model.Protocol, er
 }
 
 func (this *Iot) getProtocol(token string, id string) (result model.Protocol, err error) {
-	err = GetJson(token, this.config.DeviceRepositoryUrl+"/protocols/"+url.QueryEscape(id), &result)
+	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/protocols/"+url.QueryEscape(id), &result)
 	return
 }
 
@@ -146,7 +148,7 @@ func (this *Iot) GetDeviceType(token string, id string) (result model.DeviceType
 }
 
 func (this *Iot) getDeviceType(token string, id string) (result model.DeviceType, err error) {
-	err = GetJson(token, this.config.DeviceRepositoryUrl+"/device-types/"+url.QueryEscape(id), &result)
+	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/device-types/"+url.QueryEscape(id), &result)
 	return
 }
 
@@ -158,11 +160,12 @@ func (this *Iot) GetDeviceGroup(token string, id string) (result model.DeviceGro
 }
 
 func (this *Iot) getDeviceGroup(token string, id string) (result model.DeviceGroup, err error) {
-	err = GetJson(token, this.config.DeviceRepositoryUrl+"/device-groups/"+url.QueryEscape(id), &result)
+	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/device-groups/"+url.QueryEscape(id), &result)
 	return
 }
 
-func GetJson(token string, endpoint string, result interface{}) (err error) {
+func (this *Iot) GetJson(token string, endpoint string, result interface{}) (err error) {
+	this.lastUsedToken = token
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return err
@@ -181,5 +184,72 @@ func GetJson(token string, endpoint string, result interface{}) (err error) {
 		return errors.New(strings.TrimSpace(string(temp)))
 	}
 	err = json.NewDecoder(resp.Body).Decode(result)
+	return
+}
+
+func (this *Iot) GetAspectNode(token string, id string) (result model.AspectNode, err error) {
+	err = this.cache.Use("aspect-nodes."+id, func() (interface{}, error) {
+		return this.getAspectNode(token, id)
+	}, &result)
+	return
+}
+
+func (this *Iot) getAspectNode(token string, id string) (result model.AspectNode, err error) {
+	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/aspect-nodes/"+url.QueryEscape(id), &result)
+	return
+}
+
+func (this *Iot) GetLastUsedToken() string {
+	return this.lastUsedToken
+}
+
+type IdWrapper struct {
+	Id string `json:"id"`
+}
+
+func (this *Iot) GetConceptIds(token string) (ids []string, err error) {
+	limit := 100
+	offset := 0
+	temp := []IdWrapper{}
+	for len(temp) == limit || offset == 0 {
+		temp = []IdWrapper{}
+		err = this.GetJson(token, this.config.PermissionsUrl+"/v3/resources/concepts?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset)+"&sort=name.asc&rights=r", &temp)
+		if err != nil {
+			return ids, err
+		}
+		for _, wrapper := range temp {
+			ids = append(ids, wrapper.Id)
+		}
+		offset = offset + limit
+	}
+	return ids, err
+}
+
+func (this *Iot) ListFunctions(token string) (functionInfos []model.Function, err error) {
+	limit := 100
+	offset := 0
+	temp := []model.Function{}
+	for len(temp) == limit || offset == 0 {
+		temp = []model.Function{}
+		endpoint := this.config.PermissionsUrl + "/v3/resources/functions?limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset) + "&sort=name.asc&rights=r"
+		err = this.GetJson(token, endpoint, &temp)
+		if err != nil {
+			return functionInfos, err
+		}
+		functionInfos = append(functionInfos, temp...)
+		offset = offset + limit
+	}
+	return functionInfos, err
+}
+
+func (this *Iot) GetCharacteristic(token string, id string) (result model.Characteristic, err error) {
+	err = this.cache.Use("characteristics."+id, func() (interface{}, error) {
+		return this.getCharacteristic(token, id)
+	}, &result)
+	return
+}
+
+func (this *Iot) getCharacteristic(token string, id string) (result model.Characteristic, err error) {
+	err = this.GetJson(token, this.config.DeviceManagerUrl+"/characteristics/"+url.PathEscape(id), &result)
 	return
 }

@@ -5581,7 +5581,8 @@ var iotExport = `
                                     "serialization_options": null,
                                     "sub_content_variables": null,
                                     "type": "https://schema.org/Integer",
-                                    "value": null
+                                    "value": null,
+									"function_id": "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290"
                                 },
                                 {
                                     "characteristic_id": "",
@@ -13840,7 +13841,8 @@ var iotExport = `
                             "serialization_options": null,
                             "sub_content_variables": null,
                             "type": "https://schema.org/Float",
-                            "value": null
+                            "value": null,
+							"function_id": "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c"
                         },
                         "id": "urn:infai:ses:content:fc2b64c6-9c08-40ea-ae03-c42eb4962239",
                         "protocol_segment_id": "urn:infai:ses:protocol-segment:0d211842-cef8-41ec-ab6b-9dbc31bc3a65",
@@ -24127,10 +24129,11 @@ var iotExport = `
                 "outputs": [
                     {
                         "content_variable": {
-                            "characteristic_id": "",
+                            "characteristic_id": "urn:infai:ses:characteristic:64928e9f-98ca-42bb-a1e5-adf2a760a2f9",
                             "id": "urn:infai:ses:content-variable:360cdd55-7657-41fc-87a9-ac5cba6760e6",
                             "name": "struct",
                             "serialization_options": null,
+							"function_id": "urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869",
                             "sub_content_variables": [
                                 {
                                     "characteristic_id": "urn:infai:ses:characteristic:d840607c-c8f9-45d6-b9bd-2c2d444e2899",

@@ -114,7 +114,7 @@ func (this *Command) getFilteredServices(functionId string, aspect model.AspectN
 			contents = service.Outputs
 		}
 		matchesCriteria := anyContentMatchesCriteria(contents, model.DeviceGroupFilterCriteria{FunctionId: functionId, AspectId: aspect.Id}, aspect)
-		if matchesCriteria && !(isMeasuringFunctionId(functionId) && service.Interaction == model.EVENT) {
+		if matchesCriteria {
 			serviceIndex[service.Id] = service
 		}
 	}

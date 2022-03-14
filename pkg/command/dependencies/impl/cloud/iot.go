@@ -28,6 +28,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -184,6 +185,10 @@ func (this *Iot) GetJson(token string, endpoint string, result interface{}) (err
 		return errors.New(strings.TrimSpace(string(temp)))
 	}
 	err = json.NewDecoder(resp.Body).Decode(result)
+	if err != nil {
+		log.Println("ERROR:", err.Error())
+		debug.PrintStack()
+	}
 	return
 }
 

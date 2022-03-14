@@ -85,8 +85,9 @@ func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId 
 		if aspectId != "" {
 			aspect, err = this.iot.GetAspectNode(token, aspectId)
 			if err != nil {
-				log.Println("WARNING: unable to find aspect node, use aspect node without descendants")
+				log.Println("WARNING: unable to find aspect node, use aspect node without descendants", err)
 				aspect.Id = aspectId
+				err = nil
 			}
 		}
 

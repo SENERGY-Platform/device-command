@@ -398,6 +398,31 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 				t.Error(serviceCallCount)
 			}
 		})
+
+		t.Run("device group air getTemperature", sendCommand(config, api.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			GroupId:    "group_temperature",
+			AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+		}, 200, "[13,13,13]"))
+
+		t.Run("device group outside air getTemperature", sendCommand(config, api.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			GroupId:    "group_temperature",
+			AspectId:   "urn:infai:ses:aspect:outside_air",
+		}, 200, "[13,13,13]"))
+
+		t.Run("device group outside foo-aspect getTemperature", sendCommand(config, api.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			GroupId:    "group_temperature",
+			AspectId:   "urn:infai:ses:aspect:foo-aspect",
+		}, 200, "[]"))
+
+		t.Run("device getTemperature with aspect", sendCommand(config, api.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+			AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+		}, 200, "[13]"))
 	}
 }
 

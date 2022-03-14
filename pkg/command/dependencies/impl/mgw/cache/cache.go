@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/fallback"
 	"github.com/coocood/freecache"
 	"log"
+	"runtime/debug"
 )
 
 var L1Expiration = 60         // 60sec
@@ -84,5 +85,9 @@ func (this *Cache) Use(key string, getter func() (interface{}, error), result in
 		return err
 	}
 	this.Set(key, value)
-	return json.Unmarshal(value, &result)
+	err = json.Unmarshal(value, &result)
+	if err != nil {
+		debug.PrintStack()
+	}
+	return err
 }

@@ -1131,7 +1131,23 @@ var iotExport = `
     "/aspects/urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6": {
         "id": "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
         "name": "Air",
-        "rdf_type": "https://senergy.infai.org/ontology/Aspect"
+        "sub_aspects": [
+			{
+				"id": "urn:infai:ses:aspect:outside_air",
+				"name": "outside_air"
+			}
+		]
+    },
+	 "/aspect-nodes/urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6": {
+        "id": "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+        "name": "Air",
+        "descendent_ids": [
+			"urn:infai:ses:aspect:outside_air"
+		]
+    },
+	"/aspect-nodes/urn:infai:ses:aspect:outside_air": {
+        "id": "urn:infai:ses:aspect:outside_air",
+        "name": "outside_air"
     },
     "/aspects/urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6": {
         "id": "urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6",
@@ -13779,7 +13795,7 @@ var iotExport = `
                                     "sub_content_variables": null,
                                     "type": "https://schema.org/Float",
                                     "value": null,
-									"aspect_id": "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+									"aspect_id": "urn:infai:ses:aspect:outside_air",
 									"function_id": "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b"
                                 },
                                 {

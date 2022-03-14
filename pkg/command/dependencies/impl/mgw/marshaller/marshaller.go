@@ -31,6 +31,7 @@ import (
 	marshaller_service_model "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	marshaller_service_v2 "github.com/SENERGY-Platform/marshaller/lib/marshaller/v2"
 	"log"
+	"runtime/debug"
 )
 
 func NewMarshaller(ctx context.Context, conf configuration.Config, iot interfaces.Iot) (*Marshaller, error) {
@@ -96,9 +97,15 @@ func (this *Marshaller) UnmarshalFromServiceAndProtocol(characteristicId string,
 func jsonCast(in interface{}, out interface{}) (err error) {
 	temp, err := json.Marshal(in)
 	if err != nil {
+		debug.PrintStack()
 		return err
 	}
-	return json.Unmarshal(temp, out)
+	err = json.Unmarshal(temp, out)
+	if err != nil {
+		debug.PrintStack()
+		return err
+	}
+	return nil
 }
 
 func (this *Marshaller) MarshalV2(service model.Service, protocol model.Protocol, data []marshaller.MarshallingV2RequestData) (result map[string]string, err error) {
@@ -133,8 +140,10 @@ func (this *Marshaller) UnmarshalV2(request marshaller.UnmarshallingV2Request) (
 	}
 	var mockAspect *marshaller_service_model.AspectNode
 	if request.AspectNode.Id != "" {
+		mockAspect = &marshaller_service_model.AspectNode{}
 		err = jsonCast(request.AspectNode, mockAspect)
 		if err != nil {
+			debug.PrintStack()
 			return result, err
 		}
 	}

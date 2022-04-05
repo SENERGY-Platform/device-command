@@ -1146,6 +1146,13 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
+		t.Run("device default setTemperature", sendCommand(config, api.CommandMessage{
+			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
+			Input:      nil,
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
+		}, 200, "[null]"))
+
 		t.Run("device setTemperature", sendCommand(config, api.CommandMessage{
 			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
 			Input:      21,

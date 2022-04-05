@@ -102,13 +102,15 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 	if isControllingFunction(function) {
 		inputCharacteristicId = characteristicId
 		inputFunctionId = functionId
-		data = []marshaller.MarshallingV2RequestData{
-			{
-				Value:            input,
-				CharacteristicId: inputCharacteristicId,
-				FunctionId:       inputFunctionId,
-				AspectNode:       inputAspectNode,
-			},
+		if input != nil {
+			data = []marshaller.MarshallingV2RequestData{
+				{
+					Value:            input,
+					CharacteristicId: inputCharacteristicId,
+					FunctionId:       inputFunctionId,
+					AspectNode:       inputAspectNode,
+				},
+			}
 		}
 		inputAspectNode = aspectNode
 	} else {

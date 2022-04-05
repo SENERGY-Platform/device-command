@@ -13857,7 +13857,7 @@ var iotExport = `
                             "serialization_options": null,
                             "sub_content_variables": null,
                             "type": "https://schema.org/Float",
-                            "value": null,
+                            "value": 21,
 							"function_id": "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c"
                         },
                         "id": "urn:infai:ses:content:fc2b64c6-9c08-40ea-ae03-c42eb4962239",

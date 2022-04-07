@@ -30,15 +30,15 @@ import (
 	"time"
 )
 
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout)
+func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{}) {
+	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout, preferEventValue)
 	if code == http.StatusOK {
 		resp = []interface{}{resp}
 	}
 	return code, resp
 }
 
-func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string) (code int, resp interface{}) {
+func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{}) {
 	timeoutDuration := this.config.DefaultTimeoutDuration
 	var err error
 	if timeout != "" {
@@ -75,7 +75,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
-	if service.Interaction == model.EVENT && isMeasuringFunctionId(functionId) {
+	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
 		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId)
 	}
 

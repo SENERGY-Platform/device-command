@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
+	"strconv"
 	"sync"
 )
 
@@ -35,6 +36,15 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
+		}
+		preferEventValueStr := request.URL.Query().Get("prefer_event_value")
+		preferEventValue := false
+		if preferEventValueStr != "" {
+			preferEventValue, err = strconv.ParseBool(preferEventValueStr)
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 		timeout := request.URL.Query().Get("timeout")
 		cmd := CommandMessage{}
@@ -50,7 +60,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 		}
 
 		if cmd.DeviceId != "" && cmd.ServiceId != "" {
-			code, result := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout)
+			code, result := command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue)
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			writer.WriteHeader(code)
 			json.NewEncoder(writer).Encode(result)
@@ -58,7 +68,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 		}
 
 		if cmd.GroupId != "" {
-			code, result := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout)
+			code, result := command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue)
 			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 			writer.WriteHeader(code)
 			json.NewEncoder(writer).Encode(result)
@@ -75,6 +85,15 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+		preferEventValueStr := request.URL.Query().Get("prefer_event_value")
+		preferEventValue := false
+		if preferEventValueStr != "" {
+			preferEventValue, err = strconv.ParseBool(preferEventValueStr)
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
 		timeout := request.URL.Query().Get("timeout")
 		batch := BatchRequest{}
 		err = json.NewDecoder(request.Body).Decode(&batch)
@@ -89,14 +108,14 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, co
 			return
 		}
 
-		result := runBatch(token, command, batch, timeout)
+		result := runBatch(token, command, batch, timeout, preferEventValue)
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		json.NewEncoder(writer).Encode(result)
 		return
 	})
 }
 
-func runBatch(token auth.Token, command Command, batch BatchRequest, timeout string) []BatchResultElement {
+func runBatch(token auth.Token, command Command, batch BatchRequest, timeout string, preferEventValue bool) []BatchResultElement {
 	if len(batch) == 0 {
 		return []BatchResultElement{}
 	}
@@ -122,9 +141,9 @@ func runBatch(token auth.Token, command Command, batch BatchRequest, timeout str
 				var code int
 				var temp interface{}
 				if cmd.DeviceId != "" && cmd.ServiceId != "" {
-					code, temp = command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout)
+					code, temp = command.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue)
 				} else if cmd.GroupId != "" {
-					code, temp = command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout)
+					code, temp = command.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue)
 				}
 				mux.Lock()
 				defer mux.Unlock()

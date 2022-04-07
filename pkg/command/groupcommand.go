@@ -25,7 +25,7 @@ import (
 	"sync"
 )
 
-func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string) (code int, resp interface{}) {
+func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{}) {
 	subTasks, err := this.GetSubTasks(token.Jwt(), groupId, functionId, aspectId, deviceClassId, input)
 	if err != nil {
 		return http.StatusInternalServerError, err.Error()
@@ -38,7 +38,7 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 		wg.Add(1)
 		go func(sub SubCommand) {
 			defer wg.Done()
-			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectId, input, timeout)
+			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectId, input, timeout, preferEventValue)
 			if this.config.Debug {
 				log.Println("DEBUG: group sub result:", tempCode, temp)
 			}

@@ -18,6 +18,7 @@ package command
 
 import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/device-command/pkg/command/eventbatch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
@@ -30,15 +31,15 @@ import (
 	"time"
 )
 
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout, preferEventValue)
+func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, batch *eventbatch.EventBatch) (code int, resp interface{}) {
+	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout, preferEventValue, batch)
 	if code == http.StatusOK {
 		resp = []interface{}{resp}
 	}
 	return code, resp
 }
 
-func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{}) {
+func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, eventBatch *eventbatch.EventBatch) (code int, resp interface{}) {
 	timeoutDuration := this.config.DefaultTimeoutDuration
 	var err error
 	if timeout != "" {
@@ -76,7 +77,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
 	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
-		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId)
+		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, eventBatch)
 	}
 
 	var aspectNode *model.AspectNode

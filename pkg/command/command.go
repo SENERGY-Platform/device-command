@@ -18,6 +18,7 @@ package command
 
 import (
 	"context"
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
@@ -25,6 +26,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/register"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
+	"net/http"
 	"strings"
 )
 
@@ -102,4 +104,14 @@ func isMeasuringFunctionId(id string) bool {
 		return true
 	}
 	return false
+}
+
+func (this *Command) Command(token auth.Token, cmd CommandMessage, timeout string, preferEventValue bool) (code int, resp interface{}) {
+	if cmd.DeviceId != "" && cmd.ServiceId != "" {
+		return this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, nil)
+	}
+	if cmd.GroupId != "" {
+		return this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, nil)
+	}
+	return http.StatusBadRequest, "missing device_id, service_id or group_id"
 }

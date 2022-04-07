@@ -18,6 +18,7 @@ package command
 
 import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/device-command/pkg/command/eventbatch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"log"
 	"net/http"
@@ -25,7 +26,7 @@ import (
 	"sync"
 )
 
-func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{}) {
+func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, batch *eventbatch.EventBatch) (code int, resp interface{}) {
 	subTasks, err := this.GetSubTasks(token.Jwt(), groupId, functionId, aspectId, deviceClassId, input)
 	if err != nil {
 		return http.StatusInternalServerError, err.Error()
@@ -38,7 +39,7 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 		wg.Add(1)
 		go func(sub SubCommand) {
 			defer wg.Done()
-			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectId, input, timeout, preferEventValue)
+			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectId, input, timeout, preferEventValue, batch)
 			if this.config.Debug {
 				log.Println("DEBUG: group sub result:", tempCode, temp)
 			}

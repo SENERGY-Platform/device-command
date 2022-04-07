@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
+	"github.com/SENERGY-Platform/device-command/pkg/command/eventbatch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
@@ -30,8 +31,8 @@ import (
 	"strings"
 )
 
-func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string) (code int, result interface{}) {
-	output, err := this.getLastEventMessage(token, device, service, protocol)
+func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, eventBatch *eventbatch.EventBatch) (code int, result interface{}) {
+	output, err := this.getLastEventMessage(token, device, service, protocol, eventBatch)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to get event value: " + err.Error()
 	}
@@ -50,9 +51,14 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 	return 200, temp
 }
 
-func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol) (result map[string]string, err error) {
+func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, eventBatch *eventbatch.EventBatch) (result map[string]string, err error) {
 	request := createTimescaleRequest(device, service)
-	response, err := this.timescale.Query(token, request)
+	response := []interfaces.TimescaleResponse{}
+	if eventBatch != nil {
+		response, err = eventBatch.Query(device, service, request)
+	} else {
+		response, err = this.timescale.Query(token, request)
+	}
 	if err != nil {
 		return result, err
 	}

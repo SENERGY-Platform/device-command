@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/SENERGY-Platform/device-command/pkg/api/util"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
@@ -32,8 +33,8 @@ import (
 )
 
 type Command interface {
-	DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{})
-	GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string, preferEventValue bool) (code int, resp interface{})
+	Command(token auth.Token, cmd command.CommandMessage, timeout string, preferEventValue bool) (code int, resp interface{})
+	Batch(token auth.Token, batch command.BatchRequest, timeout string, preferEventValue bool) []command.BatchResultElement
 }
 
 var endpoints = []func(config configuration.Config, router *httprouter.Router, command Command){}

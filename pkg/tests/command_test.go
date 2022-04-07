@@ -912,14 +912,14 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	t.Run("command", sendCommand(config, api.CommandMessage{
+	t.Run("command", sendCommand(config, command.CommandMessage{
 		FunctionId:    "urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33",
 		GroupId:       "urn:infai:ses:device-group:be0e1dff-6325-4a1a-abbf-9e442c9cfdc2",
 		DeviceClassId: "urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86",
 		Input:         5641,
 	}, 200, `[null,null]`))
 
-	t.Run("batch", sendCommandBatch(config, api.BatchRequest{
+	t.Run("batch", sendCommandBatch(config, command.BatchRequest{
 		{
 			FunctionId:    "urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33",
 			GroupId:       "urn:infai:ses:device-group:be0e1dff-6325-4a1a-abbf-9e442c9cfdc2",
@@ -1146,39 +1146,39 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
-		t.Run("device default setTemperature", sendCommand(config, api.CommandMessage{
+		t.Run("device default setTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
 			Input:      nil,
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
 		}, 200, "[null]"))
 
-		t.Run("device setTemperature", sendCommand(config, api.CommandMessage{
+		t.Run("device setTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
 			Input:      21,
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
 		}, 200, "[null]"))
 
-		t.Run("device getTemperature", sendCommand(config, api.CommandMessage{
+		t.Run("device getTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
 		}, 200, "[13]"))
 
-		t.Run("device timeout", sendCommand(config, api.CommandMessage{
+		t.Run("device timeout", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:00549f18-88b5-44c7-adb1-f558e8d53d1d",
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:36fd778e-b04d-4d72-bed5-1b77ed1164b9",
 		}, http.StatusRequestTimeout, `"timeout"`))
 
-		t.Run("invalid command", sendCommand(config, api.CommandMessage{
+		t.Run("invalid command", sendCommand(config, command.CommandMessage{
 			FunctionId: "foobar",
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
 		}, 500, `"unable to load function: not found"`))
 
-		t.Run("device color", sendCommand(config, api.CommandMessage{
+		t.Run("device color", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599",
 			Input: map[string]interface{}{
 				"r": 50,
@@ -1189,31 +1189,31 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			ServiceId: "urn:infai:ses:service:1b0ef253-16f7-4b65-8a15-fe79fccf7e70",
 		}, 200, "[null]"))
 
-		t.Run("device event color", sendCommand(config, api.CommandMessage{
+		t.Run("device event color", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869",
 			DeviceId:   "color_event",
 			ServiceId:  "urn:infai:ses:service:color_event",
 		}, 200, `[{"b":158,"g":166,"r":50}]`))
 
-		t.Run("device event on", sendCommand(config, api.CommandMessage{
+		t.Run("device event on", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 			DeviceId:   "color_event",
 			ServiceId:  "urn:infai:ses:service:color_event",
 		}, 200, `["on"]`))
 
 		//some services are called as event (timescale call), some as request
-		t.Run("device group color", sendCommand(config, api.CommandMessage{
+		t.Run("device group color", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869",
 			GroupId:    "group_color",
 		}, 200, `[{"b":158,"g":166,"r":50},{"b":158,"g":166,"r":50},{"b":158,"g":166,"r":50}]`))
 
 		//some services return a timeout, some return 13
-		t.Run("device group getTemperature", sendCommand(config, api.CommandMessage{
+		t.Run("device group getTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
 			GroupId:    "group_temperature",
 		}, 200, "[13,13,13]"))
 
-		t.Run("device batch", sendCommandBatch(config, api.BatchRequest{
+		t.Run("device batch", sendCommandBatch(config, command.BatchRequest{
 			{
 				FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
 				Input:      21,
@@ -1273,7 +1273,7 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			},
 		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":["on"]}]`))
 
-		t.Run("new timestamp", sendCommandBatch(config, api.BatchRequest{
+		t.Run("new timestamp", sendCommandBatch(config, command.BatchRequest{
 			{
 				FunctionId: "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290",
 				DeviceId:   "urn:infai:ses:device:timestamp-test",
@@ -1287,25 +1287,25 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			}
 		})
 
-		t.Run("device group air getTemperature", sendCommand(config, api.CommandMessage{
+		t.Run("device group air getTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
 			GroupId:    "group_temperature",
 			AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
 		}, 200, "[13,13,13]"))
 
-		t.Run("device group outside air getTemperature", sendCommand(config, api.CommandMessage{
+		t.Run("device group outside air getTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
 			GroupId:    "group_temperature",
 			AspectId:   "urn:infai:ses:aspect:outside_air",
 		}, 200, "[13,13,13]"))
 
-		t.Run("device group outside foo-aspect getTemperature", sendCommand(config, api.CommandMessage{
+		t.Run("device group outside foo-aspect getTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
 			GroupId:    "group_temperature",
 			AspectId:   "urn:infai:ses:aspect:foo-aspect",
 		}, 200, "[]"))
 
-		t.Run("device getTemperature with aspect", sendCommand(config, api.CommandMessage{
+		t.Run("device getTemperature with aspect", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
@@ -1314,7 +1314,7 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 	}
 }
 
-func sendCommandBatch(config configuration.Config, commandMessage api.BatchRequest, expectedCode int, expectedContent string) func(t *testing.T) {
+func sendCommandBatch(config configuration.Config, commandMessage command.BatchRequest, expectedCode int, expectedContent string) func(t *testing.T) {
 	return func(t *testing.T) {
 		buff := &bytes.Buffer{}
 		err := json.NewEncoder(buff).Encode(commandMessage)
@@ -1349,7 +1349,7 @@ func sendCommandBatch(config configuration.Config, commandMessage api.BatchReque
 	}
 }
 
-func sendCommand(config configuration.Config, commandMessage api.CommandMessage, expectedCode int, expectedContent string) func(t *testing.T) {
+func sendCommand(config configuration.Config, commandMessage command.CommandMessage, expectedCode int, expectedContent string) func(t *testing.T) {
 	return func(t *testing.T) {
 		buff := &bytes.Buffer{}
 		err := json.NewEncoder(buff).Encode(commandMessage)

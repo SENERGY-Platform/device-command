@@ -1,6 +1,6 @@
 module github.com/SENERGY-Platform/device-command
 
-go 1.17
+go 1.18
 
 require (
 	github.com/SENERGY-Platform/converter v0.0.0-20220302112210-0325026a0e9f

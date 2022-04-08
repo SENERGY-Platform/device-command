@@ -42,11 +42,15 @@ import (
 )
 
 func TestCommandUnscaled(t *testing.T) {
-	testCommand("")(t)
+	testCommand("", false)(t)
+}
+
+func TestCommandUnscaledCloud(t *testing.T) {
+	testCommand("", true)(t)
 }
 
 func TestCommandScaled(t *testing.T) {
-	testCommand("scalingSuffix")(t)
+	testCommand("scalingSuffix", false)(t)
 }
 
 func TestGroupCommand_SNRGY_1883(t *testing.T) {
@@ -899,7 +903,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		t.Error(err)
 	})
 
-	cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, cloud.TimescaleFactory)
+	cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, mgw.TimescaleFactory)
 	if err != nil {
 		t.Error(err)
 		return
@@ -930,7 +934,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 
 }
 
-func testCommand(scalingSuffix string) func(t *testing.T) {
+func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 	return func(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		defer wg.Wait()
@@ -950,17 +954,32 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			return
 		}
 
-		config, err = timescaleEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
-			"color_event": {
-				"urn:infai:ses:service:color_event": {
-					"struct.hue":        176,
-					"struct.saturation": 70,
-					"struct.brightness": 65,
-					"struct.on":         true,
-					"struct.status":     200,
+		if cloudTimescale == true {
+			config, err = timescaleCloudEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
+				"color_event": {
+					"urn:infai:ses:service:color_event": {
+						"struct.hue":        176,
+						"struct.saturation": 70,
+						"struct.brightness": 65,
+						"struct.on":         true,
+						"struct.status":     200,
+					},
 				},
-			},
-		})
+			})
+		} else {
+			config, err = timescaleEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
+				"color_event": {
+					"getStatus": {
+						"hue":        176,
+						"saturation": 70,
+						"brightness": 65,
+						"on":         true,
+						"status":     200,
+					},
+				},
+			})
+		}
+
 		if err != nil {
 			t.Error(err)
 			return
@@ -1133,7 +1152,11 @@ func testCommand(scalingSuffix string) func(t *testing.T) {
 			t.Error(err)
 		})
 
-		cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, cloud.TimescaleFactory)
+		timescaleFactory := mgw.TimescaleFactory
+		if cloudTimescale {
+			timescaleFactory = cloud.TimescaleFactory
+		}
+		cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, timescaleFactory)
 		if err != nil {
 			t.Error(err)
 			return

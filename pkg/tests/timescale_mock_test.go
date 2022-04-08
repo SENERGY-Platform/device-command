@@ -77,3 +77,65 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 
 	return config, nil
 }
+
+type TimescaleMockQuery = []MockQueriesRequestElement
+
+type MockQueriesRequestElement struct {
+	DeviceId  string
+	ServiceId string
+	Limit     int
+	Columns   []MockQueriesRequestElementColumn
+}
+
+type MockQueriesRequestElementColumn struct {
+	Name string
+}
+
+type MockTimescaleQueryResponse = [][][]interface{} //[query-index][0][column-index + 1]
+
+func timescaleCloudEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, values map[string]map[string]map[string]interface{}) (config configuration.Config, err error) {
+	config = initialConfig
+
+	get := func(req MockQueriesRequestElement) (value [][]interface{}) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println(err)
+				value = nil
+			}
+		}()
+		columnValues := []interface{}{""}
+		for _, c := range req.Columns {
+			columnValues = append(columnValues, values[req.DeviceId][req.ServiceId][c.Name])
+		}
+		value = [][]interface{}{columnValues}
+		return value
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		msg := TimescaleMockQuery{}
+		err = json.NewDecoder(request.Body).Decode(&msg)
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		result := MockTimescaleQueryResponse{}
+
+		for _, req := range msg {
+			result = append(result, get(req))
+		}
+
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		json.NewEncoder(writer).Encode(result)
+		return
+	}))
+	wg.Add(1)
+	go func() {
+		<-ctx.Done()
+		server.Close()
+		wg.Done()
+	}()
+
+	config.TimescaleWrapperUrl = server.URL
+
+	return config, nil
+}

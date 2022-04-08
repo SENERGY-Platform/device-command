@@ -44,11 +44,12 @@ func NewTimescale(timescaleWrapperUrl string) *Timescale {
 
 func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleRequest, timeout time.Duration) (result []interfaces.TimescaleResponse, err error) {
 	body := &bytes.Buffer{}
-	err = json.NewEncoder(body).Encode(this.castRequest(request))
+	query := this.castRequest(request)
+	err = json.NewEncoder(body).Encode(query)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", this.TimescaleWrapperUrl+"/last-values", body)
+	req, err := http.NewRequest("POST", this.TimescaleWrapperUrl+"/queries", body)
 	if err != nil {
 		return result, err
 	}
@@ -65,23 +66,111 @@ func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleReq
 		temp, _ := io.ReadAll(resp.Body)
 		return result, errors.New(strings.TrimSpace(string(temp)))
 	}
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	return
+	queryResponse := TimescaleQueryResponse{}
+	err = json.NewDecoder(resp.Body).Decode(&queryResponse)
+	if err != nil {
+		return result, err
+	}
+	return castQueryResponse(request, query, queryResponse)
 }
 
-func (this *Timescale) castRequest(request []interfaces.TimescaleRequest) (result []TimescaleRequest) {
-	for _, r := range request {
-		result = append(result, TimescaleRequest{
-			DeviceId:   r.Device.Id,
-			ServiceId:  r.Service.Id,
-			ColumnName: r.ColumnName,
-		})
+func (this *Timescale) castRequest(request []interfaces.TimescaleRequest) (result TimescaleQuery) {
+	groupedRequests := map[string]map[string][]string{}
+	for _, req := range request {
+		if _, ok := groupedRequests[req.Device.Id]; !ok {
+			groupedRequests[req.Device.Id] = map[string][]string{}
+		}
+		groupedRequests[req.Device.Id][req.Service.Id] = append(groupedRequests[req.Device.Id][req.Service.Id], req.ColumnName)
+	}
+	for deviceId, groupedByService := range groupedRequests {
+		for serviceId, columns := range groupedByService {
+			element := QueriesRequestElement{
+				DeviceId:  deviceId,
+				ServiceId: serviceId,
+				Limit:     1,
+			}
+			for _, column := range columns {
+				element.Columns = append(element.Columns, QueriesRequestElementColumn{
+					Name: column,
+				})
+			}
+			result = append(result, element)
+		}
 	}
 	return
 }
 
-type TimescaleRequest struct {
-	DeviceId   string
-	ServiceId  string
-	ColumnName string
+func castQueryResponse(request []interfaces.TimescaleRequest, query TimescaleQuery, response TimescaleQueryResponse) (result []interfaces.TimescaleResponse, err error) {
+	deviceServiceToIndex := map[string]map[string]int{}
+	deviceServiceColumnToIndex := map[string]map[string]map[string]int{}
+	for i, q := range query {
+		if _, ok := deviceServiceToIndex[q.DeviceId]; !ok {
+			deviceServiceToIndex[q.DeviceId] = map[string]int{}
+		}
+		if _, ok := deviceServiceColumnToIndex[q.DeviceId]; !ok {
+			deviceServiceColumnToIndex[q.DeviceId] = map[string]map[string]int{}
+		}
+		deviceServiceToIndex[q.DeviceId][q.ServiceId] = i
+		if _, ok := deviceServiceColumnToIndex[q.DeviceId][q.ServiceId]; !ok {
+			deviceServiceColumnToIndex[q.DeviceId][q.ServiceId] = map[string]int{}
+		}
+		for j, c := range q.Columns {
+			deviceServiceColumnToIndex[q.DeviceId][q.ServiceId][c.Name] = j
+		}
+	}
+	getIndexes := func(deviceId string, serviceId string, columnName string) (i int, j int, err error) {
+		if _, ok := deviceServiceToIndex[deviceId]; !ok {
+			return i, j, errors.New("device not found in timescale query")
+		}
+		if _, ok := deviceServiceToIndex[deviceId][serviceId]; !ok {
+			return i, j, errors.New("service not found in timescale query")
+		}
+		i = deviceServiceToIndex[deviceId][serviceId]
+		if _, ok := deviceServiceColumnToIndex[deviceId]; !ok {
+			return i, j, errors.New("device not found in timescale query")
+		}
+		if _, ok := deviceServiceColumnToIndex[deviceId][serviceId]; !ok {
+			return i, j, errors.New("service not found in timescale query")
+		}
+		if _, ok := deviceServiceColumnToIndex[deviceId][serviceId][columnName]; !ok {
+			return i, j, errors.New("column name not found in timescale query")
+		}
+		j = deviceServiceColumnToIndex[deviceId][serviceId][columnName]
+		j = j + 1 //ignore first value which is a timestamp
+		return i, j, nil
+	}
+	for _, req := range request {
+		i, j, err := getIndexes(req.Device.Id, req.Service.Id, req.ColumnName)
+		if err != nil {
+			return result, err
+		}
+		if len(response)+1 < i {
+			return result, errors.New("timescale: request i index to large for response")
+		}
+		if len(response[i]) != 1 {
+			return result, errors.New("timescale: unexpected response")
+		}
+		if len(response[i][0])+1 < j {
+			return result, errors.New("timescale: request j index to large for response")
+		}
+		result = append(result, interfaces.TimescaleResponse{
+			Value: response[i][0][j],
+		})
+	}
+	return result, nil
 }
+
+type TimescaleQuery = []QueriesRequestElement
+
+type QueriesRequestElement struct {
+	DeviceId  string
+	ServiceId string
+	Limit     int
+	Columns   []QueriesRequestElementColumn
+}
+
+type QueriesRequestElementColumn struct {
+	Name string
+}
+
+type TimescaleQueryResponse = [][][]interface{} //[query-index][0][column-index + 1]

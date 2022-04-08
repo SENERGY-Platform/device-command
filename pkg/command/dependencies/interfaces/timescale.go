@@ -21,10 +21,11 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"time"
 )
 
 type Timescale interface {
-	Query(token auth.Token, request []TimescaleRequest) (result []TimescaleResponse, err error)
+	Query(token auth.Token, request []TimescaleRequest, timeout time.Duration) (result []TimescaleResponse, err error)
 }
 type TimescaleFactory func(ctx context.Context, config configuration.Config) (Timescale, error)
 

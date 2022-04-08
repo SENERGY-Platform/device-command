@@ -42,7 +42,7 @@ func NewTimescale(timescaleWrapperUrl string) *Timescale {
 	return &Timescale{TimescaleWrapperUrl: timescaleWrapperUrl}
 }
 
-func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleRequest) (result []interfaces.TimescaleResponse, err error) {
+func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleRequest, timeout time.Duration) (result []interfaces.TimescaleResponse, err error) {
 	body := &bytes.Buffer{}
 	err = json.NewEncoder(body).Encode(this.castRequest(request))
 	if err != nil {
@@ -54,7 +54,7 @@ func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleReq
 	}
 	req.Header.Set("Authorization", token.Jwt())
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: timeout,
 	}
 	resp, err := client.Do(req)
 	if err != nil {

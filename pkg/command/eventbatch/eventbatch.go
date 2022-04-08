@@ -24,6 +24,7 @@ import (
 	"log"
 	"runtime/debug"
 	"sync"
+	"time"
 )
 
 type EventBatch struct {
@@ -38,6 +39,7 @@ type EventBatch struct {
 	finished        bool
 	expectedQueries int64
 	queryCount      int64
+	timeout         time.Duration
 }
 
 func New(token auth.Token, timescale interfaces.Timescale, expectedQueries int64) *EventBatch {
@@ -52,8 +54,9 @@ func New(token auth.Token, timescale interfaces.Timescale, expectedQueries int64
 	return result
 }
 
-func (this *EventBatch) Query(device model.Device, service model.Service, request []interfaces.TimescaleRequest) (result []interfaces.TimescaleResponse, err error) {
+func (this *EventBatch) Query(device model.Device, service model.Service, request []interfaces.TimescaleRequest, timeout time.Duration) (result []interfaces.TimescaleResponse, err error) {
 	this.mux.Lock()
+	this.timeout = timeout
 	if _, ok := this.mapping[device.Id]; !ok {
 		this.mapping[device.Id] = map[string][]int{}
 	}
@@ -103,6 +106,6 @@ func (this *EventBatch) sendRequest() {
 		return
 	}
 	this.finished = true
-	this.responses, this.error = this.timescale.Query(this.token, this.requests)
+	this.responses, this.error = this.timescale.Query(this.token, this.requests, this.timeout)
 	this.wg.Done()
 }

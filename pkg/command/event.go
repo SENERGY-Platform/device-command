@@ -29,10 +29,11 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 )
 
-func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, eventBatch *eventbatch.EventBatch) (code int, result interface{}) {
-	output, err := this.getLastEventMessage(token, device, service, protocol, eventBatch)
+func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, eventBatch *eventbatch.EventBatch, timeout time.Duration) (code int, result interface{}) {
+	output, err := this.getLastEventMessage(token, device, service, protocol, eventBatch, timeout)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to get event value: " + err.Error()
 	}
@@ -51,13 +52,13 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 	return 200, temp
 }
 
-func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, eventBatch *eventbatch.EventBatch) (result map[string]string, err error) {
+func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, eventBatch *eventbatch.EventBatch, timeout time.Duration) (result map[string]string, err error) {
 	request := createTimescaleRequest(device, service)
 	response := []interfaces.TimescaleResponse{}
 	if eventBatch != nil {
-		response, err = eventBatch.Query(device, service, request)
+		response, err = eventBatch.Query(device, service, request, timeout)
 	} else {
-		response, err = this.timescale.Query(token, request)
+		response, err = this.timescale.Query(token, request, timeout)
 	}
 	if err != nil {
 		return result, err

@@ -77,7 +77,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
 	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
-		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, eventBatch)
+		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, eventBatch, timeoutDuration)
 	}
 
 	var aspectNode *model.AspectNode

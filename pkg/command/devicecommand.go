@@ -76,9 +76,6 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
-	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
-		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, eventBatch, timeoutDuration)
-	}
 
 	var aspectNode *model.AspectNode
 	if aspectId != "" {
@@ -87,6 +84,14 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error()
 		}
 		aspectNode = &temp
+	}
+
+	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
+		aspect := model.AspectNode{}
+		if aspectNode != nil {
+			aspect = *aspectNode
+		}
+		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, aspect, eventBatch, timeoutDuration)
 	}
 
 	var inputCharacteristicId string

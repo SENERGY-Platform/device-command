@@ -32,7 +32,7 @@ import (
 	"time"
 )
 
-func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, eventBatch *eventbatch.EventBatch, timeout time.Duration) (code int, result interface{}) {
+func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspect model.AspectNode, eventBatch *eventbatch.EventBatch, timeout time.Duration) (code int, result interface{}) {
 	output, err := this.getLastEventMessage(token, device, service, protocol, eventBatch, timeout)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to get event value: " + err.Error()
@@ -43,8 +43,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 		CharacteristicId: characteristicId,
 		Message:          output,
 		FunctionId:       functionId,
-		AspectNode:       model.AspectNode{},
-		AspectNodeId:     "",
+		AspectNode:       aspect,
 	})
 	if err != nil {
 		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()

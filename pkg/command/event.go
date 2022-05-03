@@ -17,6 +17,7 @@
 package command
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
@@ -44,8 +45,22 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 		Message:          output,
 		FunctionId:       functionId,
 		AspectNode:       aspect,
+		AspectNodeId:     aspect.Id,
 	})
 	if err != nil {
+		if this.config.Debug {
+			log.Println("ERROR:", err)
+			marshalRequestStr, _ := json.Marshal(marshaller.UnmarshallingV2Request{
+				Service:          service,
+				Protocol:         protocol,
+				CharacteristicId: characteristicId,
+				Message:          output,
+				FunctionId:       functionId,
+				AspectNode:       aspect,
+				AspectNodeId:     aspect.Id,
+			})
+			log.Println("ERROR: unmarshal request", string(marshalRequestStr))
+		}
 		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()
 	}
 	return 200, temp

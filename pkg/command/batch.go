@@ -99,7 +99,11 @@ func (this *Command) expectedEventRequests(token auth.Token, batch []CommandMess
 				if err != nil {
 					return count, err
 				}
-				if isMeasuringFunctionId(cmd.FunctionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
+				var aspectError error
+				if cmd.AspectId != "" {
+					_, aspectError = this.iot.GetAspectNode(token.Jwt(), cmd.AspectId)
+				}
+				if aspectError == nil && isMeasuringFunctionId(cmd.FunctionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
 					count = count + 1
 				}
 			} else if cmd.GroupId != "" {

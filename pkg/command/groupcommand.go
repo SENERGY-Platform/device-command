@@ -29,12 +29,15 @@ import (
 func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, batch *eventbatch.EventBatch) (code int, resp interface{}) {
 	subTasks, err := this.GetSubTasks(token.Jwt(), groupId, functionId, aspectId, deviceClassId, input)
 	if err != nil {
+		batch.CountWait() //error -> cancel count of group
 		return http.StatusInternalServerError, err.Error()
 	}
 	wg := sync.WaitGroup{}
 	results := []interface{}{}
 	var lastErr interface{}
 	var lastErrCode int
+	batch.CountCommands(len(subTasks)) //add count for device commands
+	batch.CountWait()                  //cancel count of group command
 	for _, sub := range subTasks {
 		wg.Add(1)
 		go func(sub SubCommand) {

@@ -28,27 +28,27 @@ import (
 )
 
 type EventBatch struct {
-	token           auth.Token
-	timescale       interfaces.Timescale
-	requests        []interfaces.TimescaleRequest
-	responses       []interfaces.TimescaleResponse
-	mapping         map[string]map[string][]int //device.id -> service.id -> requests indexes
-	mux             sync.Mutex
-	wg              sync.WaitGroup
-	error           error
-	finished        bool
-	expectedQueries int64
-	queryCount      int64
-	timeout         time.Duration
+	token        auth.Token
+	timescale    interfaces.Timescale
+	requests     []interfaces.TimescaleRequest
+	responses    []interfaces.TimescaleResponse
+	mapping      map[string]map[string][]int //device.id -> service.id -> requests indexes
+	mux          sync.Mutex
+	wg           sync.WaitGroup
+	error        error
+	finished     bool
+	commandCount int
+	waitCount    int
+	timeout      time.Duration
 }
 
-func New(token auth.Token, timescale interfaces.Timescale, expectedQueries int64) *EventBatch {
+func New(token auth.Token, timescale interfaces.Timescale) *EventBatch {
 	result := &EventBatch{
-		token:           token,
-		timescale:       timescale,
-		requests:        []interfaces.TimescaleRequest{},
-		mapping:         map[string]map[string][]int{},
-		expectedQueries: expectedQueries,
+		token:        token,
+		timescale:    timescale,
+		requests:     []interfaces.TimescaleRequest{},
+		mapping:      map[string]map[string][]int{},
+		commandCount: 0,
 	}
 	result.wg.Add(1)
 	return result
@@ -86,13 +86,33 @@ func (this *EventBatch) Query(device model.Device, service model.Service, reques
 	return result, err
 }
 
-func (this *EventBatch) Wait() error {
+func (this *EventBatch) CountWait() {
+	if this == nil {
+		return
+	}
+	log.Println("DEBUG: CountWait()", this.commandCount, this.waitCount)
 	this.mux.Lock()
-	this.queryCount++
-	if this.queryCount == this.expectedQueries {
+	this.waitCount++
+	log.Println("DEBUG: CountWait() check", this.commandCount, this.waitCount)
+	if this.waitCount == this.commandCount {
 		go this.sendRequest()
 	}
 	this.mux.Unlock()
+}
+
+func (this *EventBatch) CountCommands(delta int) {
+	if this == nil {
+		return
+	}
+	log.Println("DEBUG: CountCommands()", delta, this.commandCount, this.waitCount)
+	this.mux.Lock()
+	this.commandCount = this.commandCount + delta
+	log.Println("DEBUG: CountCommands() check", delta, this.commandCount, this.waitCount)
+	this.mux.Unlock()
+}
+
+func (this *EventBatch) Wait() error {
+	this.CountWait()
 	this.wg.Wait()
 	return this.error
 }

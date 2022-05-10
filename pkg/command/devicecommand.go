@@ -51,15 +51,18 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 
 	device, err := this.iot.GetDevice(token.Jwt(), deviceId)
 	if err != nil {
+		eventBatch.CountWait() //error -> cancel count of device
 		return http.StatusInternalServerError, "unable to load device: " + err.Error()
 	}
 	service, err := this.iot.GetService(token.Jwt(), device, serviceId)
 	if err != nil {
+		eventBatch.CountWait() //error -> cancel count of device
 		return http.StatusInternalServerError, "unable to load service: " + err.Error()
 	}
 
 	function, err := this.iot.GetFunction(token.Jwt(), functionId)
 	if err != nil {
+		eventBatch.CountWait() //error -> cancel count of device
 		return http.StatusInternalServerError, "unable to load function: " + err.Error()
 	}
 
@@ -67,6 +70,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 	if function.ConceptId != "" {
 		concept, err := this.iot.GetConcept(token.Jwt(), function.ConceptId)
 		if err != nil {
+			eventBatch.CountWait() //error -> cancel count of device
 			return http.StatusInternalServerError, "unable to load concept: " + err.Error()
 		}
 		characteristicId = concept.BaseCharacteristicId
@@ -74,6 +78,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 
 	protocol, err := this.iot.GetProtocol(token.Jwt(), service.ProtocolId)
 	if err != nil {
+		eventBatch.CountWait() //error -> cancel count of device
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
 
@@ -81,6 +86,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 	if aspectId != "" {
 		temp, err := this.iot.GetAspectNode(token.Jwt(), aspectId)
 		if err != nil {
+			eventBatch.CountWait() //error -> cancel count of device
 			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error()
 		}
 		aspectNode = &temp
@@ -93,6 +99,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		}
 		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, aspect, eventBatch, timeoutDuration)
 	}
+	eventBatch.CountWait() //is not event -> cancel count of device
 
 	var inputCharacteristicId string
 	var outputCharacteristicId string

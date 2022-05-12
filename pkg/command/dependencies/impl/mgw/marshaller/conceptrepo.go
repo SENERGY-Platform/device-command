@@ -36,6 +36,7 @@ type ConceptRepo struct {
 	conceptByCharacteristic            map[string][]model.Concept
 	rootCharacteristicByCharacteristic map[string]model.Characteristic
 	characteristicsOfFunction          map[string][]string
+	functionToConcept                  map[string]string
 	mux                                sync.Mutex
 }
 
@@ -52,6 +53,7 @@ func NewConceptRepo(ctx context.Context, config configuration.Config, iot interf
 		conceptByCharacteristic:            map[string][]model.Concept{},
 		rootCharacteristicByCharacteristic: map[string]model.Characteristic{},
 		characteristicsOfFunction:          map[string][]string{},
+		functionToConcept:                  map[string]string{},
 	}
 	ticker := time.NewTicker(time.Duration(config.MgwConceptRepoRefreshInterval) * time.Second)
 	go func() {
@@ -103,6 +105,12 @@ func (this *ConceptRepo) GetConcept(id string) (concept model.Concept, err error
 		return concept, errors.New("no concept found for id " + id)
 	}
 	return concept, nil
+}
+
+func (this *ConceptRepo) GetConceptIdOfFunction(id string) string {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	return this.functionToConcept[id]
 }
 
 func getCharacteristicDescendents(characteristic model.Characteristic) (result []model.Characteristic) {
@@ -163,6 +171,7 @@ func (this *ConceptRepo) registerFunction(f FunctionInfo) {
 		return
 	}
 	this.characteristicsOfFunction[f.Id] = concept.CharacteristicIds
+	this.functionToConcept[f.Id] = f.ConceptId
 }
 
 func (this *ConceptRepo) Load() error {

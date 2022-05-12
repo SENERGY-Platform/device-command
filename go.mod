@@ -3,14 +3,14 @@ module github.com/SENERGY-Platform/device-command
 go 1.18
 
 require (
-	github.com/SENERGY-Platform/converter v0.0.0-20220506072101-e31e4cedd586
-	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220506084642-47e15f9a2d69
-	github.com/SENERGY-Platform/marshaller v0.0.0-20220506082425-7a398c073b9d
+	github.com/SENERGY-Platform/converter v0.0.0-20220512105400-d22e8a0222db
+	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220512124436-bca5eb20f421
+	github.com/SENERGY-Platform/marshaller v0.0.0-20220512122627-deaeb66ecf80
 	github.com/Shopify/sarama v1.22.0
-	github.com/coocood/freecache v1.1.0
+	github.com/coocood/freecache v1.2.1
 	github.com/eclipse/paho.mqtt.golang v1.3.5
 	github.com/golang-jwt/jwt v3.2.1+incompatible
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.3.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/ory/dockertest/v3 v3.8.1
 	github.com/pkg/errors v0.9.1
@@ -21,12 +21,13 @@ require (
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/DataDog/zstd v1.4.0 // indirect
+	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/RyanCarrier/dijkstra v1.1.0 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b // indirect
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
-	github.com/cespare/xxhash v1.1.0 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

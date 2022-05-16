@@ -3,9 +3,9 @@ module github.com/SENERGY-Platform/device-command
 go 1.18
 
 require (
-	github.com/SENERGY-Platform/converter v0.0.0-20220512105400-d22e8a0222db
-	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220512124436-bca5eb20f421
-	github.com/SENERGY-Platform/marshaller v0.0.0-20220512122627-deaeb66ecf80
+	github.com/SENERGY-Platform/converter v0.0.0-20220516061431-8ae63b7fc0f8
+	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220516090039-2f3c8d3ad446
+	github.com/SENERGY-Platform/marshaller v0.0.0-20220516083047-e675abced587
 	github.com/Shopify/sarama v1.22.0
 	github.com/coocood/freecache v1.2.1
 	github.com/eclipse/paho.mqtt.golang v1.3.5

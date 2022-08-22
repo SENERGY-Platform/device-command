@@ -52,6 +52,13 @@
 
     "mgw_concept_repo_refresh_interval": 3600,
 
+    "overwrite_auth_token": false,
+    "auth_endpoint": "",
+    "auth_client_id": "",
+    "auth_user_name": "",
+    "auth_password": "",
+    "auth_expiration_time_buffer": 2,
+
     "device_repo_cache_size_in_mb": 100,
     "kafka_topic_configs":{
         "device-command-response": [

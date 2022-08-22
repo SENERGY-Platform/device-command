@@ -68,7 +68,11 @@ func GetRouter(config configuration.Config, command Command) http.Handler {
 		log.Println("add endpoint: " + runtime.FuncForPC(reflect.ValueOf(e).Pointer()).Name())
 		e(config, router, command)
 	}
-	handler := util.NewCors(router)
+	var handler http.Handler = router
+	if config.OverwriteAuthToken {
+		handler = util.NewTokenOverwrite(config, handler)
+	}
+	handler = util.NewCors(handler)
 	handler = util.NewLogger(handler)
 	return handler
 }

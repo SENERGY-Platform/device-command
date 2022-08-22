@@ -84,6 +84,13 @@ type Config struct {
 	IotFallbackFile        string `json:"iot_fallback_file"`
 
 	MgwConceptRepoRefreshInterval int64 `json:"mgw_concept_repo_refresh_interval"` //in seconds
+
+	OverwriteAuthToken       bool    `json:"overwrite_auth_token"`
+	AuthExpirationTimeBuffer float64 `json:"auth_expiration_time_buffer"`
+	AuthEndpoint             string  `json:"auth_endpoint"`
+	AuthClientId             string  `json:"auth_client_id"`
+	AuthUserName             string  `json:"auth_user_name"`
+	AuthPassword             string  `json:"auth_password"`
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

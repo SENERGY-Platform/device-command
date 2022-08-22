@@ -957,6 +957,49 @@ var iotExport = `
         "id": "urn:infai:ses:concept:fb85f32b-1864-456d-b99f-1540892ffd02",
         "name": "contact"
     },
+"/device-types/urn:infai:ses:device-type:status_event": {
+        "attributes": null,
+        "description": "Philips Hue Color Light",
+        "device_class_id": "urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86",
+        "id": "urn:infai:ses:device-type:status_event",
+        "name": "Philips-Color-Light",
+        "rdf_type": "",
+        "services": [
+            {
+                "aspect_ids": [
+                    "urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6"
+                ],
+                "description": "",
+                "function_ids": [
+                    "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0"
+                ],
+                "id": "urn:infai:ses:service:status_event",
+                "inputs": [],
+                "interaction": "event",
+                "local_id": "getStatus",
+                "name": "getStatusService",
+                "outputs": [
+                    {
+                        "content_variable": {
+                            "characteristic_id": "urn:infai:ses:characteristic:7621686a-56bc-402d-b4cc-5b266d39736f",
+                            "id": "urn:infai:ses:content-variable:75ac34d8-c7bd-4383-bfb4-aa43ab83d90a",
+                            "name": "on",
+                            "serialization_options": null,
+                            "sub_content_variables": null,
+                            "type": "https://schema.org/Text",
+                            "value": null,
+			    "function_id": "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0"
+                        },
+                        "id": "urn:infai:ses:content:a9f506eb-52ef-4c05-9790-c72aa2975d7f",
+                        "protocol_segment_id": "urn:infai:ses:protocol-segment:0d211842-cef8-41ec-ab6b-9dbc31bc3a65",
+                        "serialization": "plain-text"
+                    }
+                ],
+                "protocol_id": "urn:infai:ses:protocol:f3a63aeb-187e-4dd9-9ef5-d97a6eb6292b",
+                "rdf_type": ""
+            }
+        ]
+    },
 "/device-types/urn:infai:ses:device-type:color_event": {
         "attributes": null,
         "description": "Philips Hue Color Light",

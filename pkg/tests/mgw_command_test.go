@@ -71,6 +71,11 @@ func testMgwCommand() func(t *testing.T) {
 					"status":     200,
 				},
 			},
+			"status_event_lid": {
+				"getStatus": {
+					"": "on",
+				},
+			},
 		})
 		if err != nil {
 			t.Error(err)
@@ -79,6 +84,12 @@ func testMgwCommand() func(t *testing.T) {
 
 		devices := map[string]map[string]interface{}{
 			"testOwner": {
+				"/devices/status_event": model.Device{
+					Id:           "status_event",
+					LocalId:      "status_event_lid",
+					Name:         "status_event",
+					DeviceTypeId: "urn:infai:ses:device-type:status_event",
+				},
 				"/devices/urn:infai:ses:device:timestamp-test": model.Device{
 					Id:           "urn:infai:ses:device:timestamp-test",
 					LocalId:      "d1-timestamp",
@@ -369,5 +380,157 @@ func testMgwCommand() func(t *testing.T) {
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
 			AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
 		}, 200, "[13]"))
+
+		t.Run("device event status", sendCommand(config, command.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+			DeviceId:   "status_event",
+			ServiceId:  "urn:infai:ses:service:status_event",
+		}, 200, `["on"]`))
 	}
+}
+
+func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	config, err := configuration.Load("../../config.json")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	config.Debug = true
+	config.ComImpl = "mgw"
+	config.MarshallerImpl = "mgw"
+	config.UseIotFallback = true
+	config.TimescaleImpl = "mgw"
+	config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
+
+	config.ServerPort, err = GetFreePort()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	devices := map[string]map[string]interface{}{
+		"testOwner": {
+			"/devices/status_event": model.Device{
+				Id:           "status_event",
+				LocalId:      "status_event_lid",
+				Name:         "status_event",
+				DeviceTypeId: "urn:infai:ses:device-type:status_event",
+			},
+			"/devices/status_event_2": model.Device{
+				Id:           "status_event_2",
+				LocalId:      "status_event_lid_2",
+				Name:         "status_event 2",
+				DeviceTypeId: "urn:infai:ses:device-type:status_event",
+			},
+		},
+	}
+
+	config, err = iotEnv(config, ctx, wg, devices)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	config, err = mqttEnv(config, ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	config, err = lastValueEnv(config, ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+
+	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mqttClient.Publish("event/status_event_lid/getStatus", 2, true, []byte("on"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		t.Log(topic, string(payload))
+		if strings.HasPrefix(topic, "command/") {
+			msg := mgw.Command{}
+			err = json.Unmarshal(payload, &msg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			parts := strings.Split(topic, "/")
+			deviceLocalId := parts[1]
+			serviceLocalId := parts[2]
+			t.Log(deviceLocalId, serviceLocalId)
+			switch serviceLocalId {
+			case "":
+				t.Error("wtf")
+			default:
+				t.Error("unknown service-id", serviceLocalId)
+				return
+			}
+			resp, err := json.Marshal(msg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			err = mqttClient.Publish(strings.Join([]string{"response", deviceLocalId, serviceLocalId}, "/"), 2, false, resp)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	})
+
+	cmd, err := command.New(ctx, config)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = api.Start(ctx, config, cmd)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	t.Run("known", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+		DeviceId:   "status_event",
+		ServiceId:  "urn:infai:ses:service:status_event",
+	}, 200, `["on"]`))
+
+	t.Run("unknown", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+		DeviceId:   "status_event_2",
+		ServiceId:  "urn:infai:ses:service:status_event",
+	}, 513, `"unable to get event value: missing last value in mgw-last-value"`))
+
+	t.Run("batch", sendCommandBatch(config, command.BatchRequest{
+		{
+			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+			DeviceId:   "status_event",
+			ServiceId:  "urn:infai:ses:service:status_event",
+		},
+		{
+			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+			DeviceId:   "status_event_2",
+			ServiceId:  "urn:infai:ses:service:status_event",
+		},
+	}, 200, `[{"status_code":200,"message":["on"]},{"status_code":513,"message":"unable to get event value: missing last value in mgw-last-value"}]`))
+
 }

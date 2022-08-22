@@ -34,9 +34,9 @@ import (
 )
 
 func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspect model.AspectNode, eventBatch *eventbatch.EventBatch, timeout time.Duration) (code int, result interface{}) {
-	output, err := this.getLastEventMessage(token, device, service, protocol, eventBatch, timeout)
+	output, err, code := this.getLastEventMessage(token, device, service, protocol, eventBatch, timeout)
 	if err != nil {
-		return http.StatusInternalServerError, "unable to get event value: " + err.Error()
+		return code, "unable to get event value: " + err.Error()
 	}
 	temp, err := this.marshaller.UnmarshalV2(marshaller.UnmarshallingV2Request{
 		Service:          service,
@@ -66,7 +66,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 	return 200, temp
 }
 
-func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, eventBatch *eventbatch.EventBatch, timeout time.Duration) (result map[string]string, err error) {
+func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, eventBatch *eventbatch.EventBatch, timeout time.Duration) (result map[string]string, err error, code int) {
 	request := createTimescaleRequest(device, service)
 	response := []interfaces.TimescaleResponse{}
 	if eventBatch != nil {
@@ -75,29 +75,32 @@ func (this *Command) getLastEventMessage(token auth.Token, device model.Device, 
 		response, err = this.timescale.Query(token, request, timeout)
 	}
 	if err != nil {
-		return result, err
+		return result, err, http.StatusInternalServerError
 	}
 	if len(request) != len(response) {
-		return result, errors.New("timescale response has less elements then the request")
+		return result, errors.New("timescale response has less elements then the request"), http.StatusInternalServerError
 	}
-	result, err = createEventValueFromTimescaleValues(service, protocol, request, response)
-	return result, err
+	result, err, code = this.createEventValueFromTimescaleValues(service, protocol, request, response)
+	return result, err, code
 }
 
-func createEventValueFromTimescaleValues(service model.Service, protocol model.Protocol, request []interfaces.TimescaleRequest, response []interfaces.TimescaleResponse) (result map[string]string, err error) {
+func (this *Command) createEventValueFromTimescaleValues(service model.Service, protocol model.Protocol, request []interfaces.TimescaleRequest, response []interfaces.TimescaleResponse) (result map[string]string, err error, code int) {
 	result = map[string]string{}
-	timescaleValue := getTimescaleValue(request, response)
+	timescaleValue, err, code := this.getTimescaleValue(request, response)
+	if err != nil {
+		return result, err, code
+	}
 	for _, content := range service.Outputs {
 		segmentValue := timescaleValue[content.ContentVariable.Name]
 		segmentName := getSegmentName(protocol, content.ProtocolSegmentId)
 		if segmentName != "" && segmentValue != nil {
 			result[segmentName], err = marshalSegmentValue(string(content.Serialization), segmentValue, content.ContentVariable.Name)
 			if err != nil {
-				return result, err
+				return result, err, http.StatusInternalServerError
 			}
 		}
 	}
-	return result, err
+	return result, err, http.StatusInternalServerError
 }
 
 func marshalSegmentValue(serializationTo string, value interface{}, rootName string) (string, error) {
@@ -110,10 +113,16 @@ func marshalSegmentValue(serializationTo string, value interface{}, rootName str
 	return m.Marshal(value, marshallermodel.ContentVariable{Name: rootName})
 }
 
-func getTimescaleValue(timescaleRequests []interfaces.TimescaleRequest, timescaleResponses []interfaces.TimescaleResponse) (result map[string]interface{}) {
+var ErrMissingLastValue = errors.New("missing last value in mgw-last-value")
+var ErrMissingLastValueCode = 513 //custom code to signify missing last-value in mgw-last-value
+
+func (this *Command) getTimescaleValue(timescaleRequests []interfaces.TimescaleRequest, timescaleResponses []interfaces.TimescaleResponse) (result map[string]interface{}, err error, code int) {
 	pathToValue := map[string]interface{}{}
 	paths := []string{}
 	for i, request := range timescaleRequests {
+		if this.config.TimescaleImpl == "mgw" && timescaleResponses[i].Time == nil {
+			return result, ErrMissingLastValue, ErrMissingLastValueCode
+		}
 		pathToValue[request.ColumnName] = timescaleResponses[i].Value
 		paths = append(paths, request.ColumnName)
 	}
@@ -125,7 +134,7 @@ func getTimescaleValue(timescaleRequests []interfaces.TimescaleRequest, timescal
 		result = setPath(result, strings.Split(path, "."), pathToValue[path])
 	}
 
-	return result
+	return result, nil, http.StatusOK
 }
 
 func setPath(orig map[string]interface{}, path []string, value interface{}) map[string]interface{} {

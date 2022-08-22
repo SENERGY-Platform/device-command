@@ -19,30 +19,31 @@ package tests
 import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ory/dockertest/v3"
 	"log"
-	"math/rand"
-	"strconv"
+	"net/http"
 	"sync"
 )
 
-func mqttEnv(config configuration.Config, ctx context.Context, wg *sync.WaitGroup) (configuration.Config, error) {
-	_, ip, err := Mqtt(ctx, wg)
+func lastValueEnv(config configuration.Config, ctx context.Context, wg *sync.WaitGroup) (configuration.Config, error) {
+	port, _, err := MgwLastValue(ctx, wg, config.MgwMqttBroker)
 	if err != nil {
 		return config, err
 	}
-	config.MgwMqttBroker = "tcp://" + ip + ":1883"
+	config.TimescaleWrapperUrl = "http://localhost:" + port
 	return config, nil
 }
 
-func Mqtt(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress string, err error) {
-	log.Println("start mqtt broker")
+func MgwLastValue(ctx context.Context, wg *sync.WaitGroup, mqttBroker string) (hostPort string, ipAddress string, err error) {
+	log.Println("start mgw-last-value")
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		return "", "", err
 	}
-	container, err := pool.Run("eclipse-mosquitto", "1.6.12", []string{})
+	container, err := pool.Run("ghcr.io/senergy-platform/mgw-last-value", "dev", []string{
+		"MQTT_BROKER=" + mqttBroker,
+		"DEBUG=true",
+	})
 	if err != nil {
 		return "", "", err
 	}
@@ -53,23 +54,11 @@ func Mqtt(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress s
 		log.Println("DEBUG: remove container " + container.Container.Name)
 		log.Println(container.Close())
 	}()
-	//go Dockerlog(pool, ctx, container, "MQTT-BROKER")
-	hostPort = container.GetPort("1883/tcp")
+	//go Dockerlog(pool, ctx, container, "MGW-LAST-VALUE")
+	hostPort = container.GetPort("8080/tcp")
 	err = pool.Retry(func() error {
-		log.Println("try to connection to broker...")
-		options := paho.NewClientOptions().
-			SetAutoReconnect(true).
-			SetCleanSession(false).
-			SetClientID("try-test-connection-" + strconv.Itoa(rand.Int())).
-			AddBroker("tcp://localhost:" + hostPort)
-
-		client := paho.NewClient(options)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-			log.Println("Error on Mqtt.Connect(): ", token.Error())
-			return token.Error()
-		}
-		defer client.Disconnect(0)
-		return nil
+		_, err := http.Get("http://localhost:" + hostPort)
+		return err
 	})
 	return hostPort, container.Container.NetworkSettings.IPAddress, err
 }

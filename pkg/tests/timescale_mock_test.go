@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"time"
 )
 
 type TimescaleMockRequest struct {
@@ -56,9 +57,11 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 		}
 		result := []interfaces.TimescaleResponse{}
 
+		now := time.Now().String()
 		for _, req := range msg {
 			result = append(result, interfaces.TimescaleResponse{
 				Value: get(req),
+				Time:  &now,
 			})
 		}
 

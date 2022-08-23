@@ -108,6 +108,7 @@ func (this *ConceptRepo) GetConcept(id string) (concept model.Concept, err error
 }
 
 func (this *ConceptRepo) GetConceptIdOfFunction(id string) string {
+	this.ensureInit()
 	this.mux.Lock()
 	defer this.mux.Unlock()
 	return this.functionToConcept[id]

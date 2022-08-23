@@ -293,7 +293,7 @@ func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *
 			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 			DeviceId:   "color_event",
 			ServiceId:  "urn:infai:ses:service:color_event",
-		}, 200, `["on"]`))
+		}, 200, `[true]`))
 
 		//some services are called as event (timescale call), some as request
 		t.Run("device group color", sendCommand(config, command.CommandMessage{
@@ -349,7 +349,7 @@ func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *
 				DeviceId:   "color_event",
 				ServiceId:  "urn:infai:ses:service:color_event",
 			},
-		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: value not found in fallback: function.foobar"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]}]`))
+		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: value not found in fallback: function.foobar"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]}]`))
 
 		t.Run("new timestamp", sendCommandBatch(config, command.BatchRequest{
 			{
@@ -388,7 +388,7 @@ func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *
 			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 			DeviceId:   "status_event",
 			ServiceId:  "urn:infai:ses:service:status_event",
-		}, 200, `["on"]`))
+		}, 200, `[true]`))
 	}
 }
 
@@ -515,7 +515,7 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 		DeviceId:   "status_event",
 		ServiceId:  "urn:infai:ses:service:status_event",
-	}, 200, `["on"]`))
+	}, 200, `[true]`))
 
 	t.Run("unknown", sendCommand(config, command.CommandMessage{
 		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
@@ -534,6 +534,152 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 			DeviceId:   "status_event_2",
 			ServiceId:  "urn:infai:ses:service:status_event",
 		},
-	}, 200, `[{"status_code":200,"message":["on"]},{"status_code":513,"message":"unable to get event value: missing last value in mgw-last-value"}]`))
+	}, 200, `[{"status_code":200,"message":[true]},{"status_code":513,"message":"unable to get event value: missing last value in mgw-last-value"}]`))
+
+}
+
+func TestShellyError(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	config, err := configuration.Load("../../config.json")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	config.Debug = true
+	config.ComImpl = "mgw"
+	config.MarshallerImpl = "mgw"
+	config.UseIotFallback = true
+	config.TimescaleImpl = "mgw"
+	config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
+
+	config.ServerPort, err = GetFreePort()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	devices := map[string]map[string]interface{}{
+		"testOwner": {
+			"/devices/status_event": model.Device{
+				Id:           "status_event",
+				LocalId:      "status_event_lid",
+				Name:         "status_event",
+				DeviceTypeId: "urn:infai:ses:device-type:1d5375f0-7d7f-46ab-956e-1d7e7ef51826",
+			},
+			"/devices/status_event_2": model.Device{
+				Id:           "status_event_2",
+				LocalId:      "status_event_lid_2",
+				Name:         "status_event 2",
+				DeviceTypeId: "urn:infai:ses:device-type:1d5375f0-7d7f-46ab-956e-1d7e7ef51826",
+			},
+		},
+	}
+
+	config, err = iotEnv(config, ctx, wg, devices)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	config, err = mqttEnv(config, ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	config, err = lastValueEnv(config, ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+
+	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mqttClient.Publish("event/status_event_lid/relay", 2, true, []byte("on"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		t.Log(topic, string(payload))
+		if strings.HasPrefix(topic, "command/") {
+			msg := mgw.Command{}
+			err = json.Unmarshal(payload, &msg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			parts := strings.Split(topic, "/")
+			deviceLocalId := parts[1]
+			serviceLocalId := parts[2]
+			t.Log(deviceLocalId, serviceLocalId)
+			switch serviceLocalId {
+			case "":
+				t.Error("wtf")
+			default:
+				t.Error("unknown service-id", serviceLocalId)
+				return
+			}
+			resp, err := json.Marshal(msg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			err = mqttClient.Publish(strings.Join([]string{"response", deviceLocalId, serviceLocalId}, "/"), 2, false, resp)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	})
+
+	cmd, err := command.New(ctx, config)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = api.Start(ctx, config, cmd)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	t.Run("known", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+		DeviceId:   "status_event",
+		ServiceId:  "urn:infai:ses:service:940fd269-27f7-4f2e-afbf-eddbf0feb4c8",
+	}, 200, `[true]`))
+
+	t.Run("unknown", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+		DeviceId:   "status_event_2",
+		ServiceId:  "urn:infai:ses:service:940fd269-27f7-4f2e-afbf-eddbf0feb4c8",
+	}, 513, `"unable to get event value: missing last value in mgw-last-value"`))
+
+	t.Run("batch", sendCommandBatch(config, command.BatchRequest{
+		{
+			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+			DeviceId:   "status_event",
+			ServiceId:  "urn:infai:ses:service:940fd269-27f7-4f2e-afbf-eddbf0feb4c8",
+		},
+		{
+			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
+			DeviceId:   "status_event_2",
+			ServiceId:  "urn:infai:ses:service:940fd269-27f7-4f2e-afbf-eddbf0feb4c8",
+		},
+	}, 200, `[{"status_code":200,"message":[true]},{"status_code":513,"message":"unable to get event value: missing last value in mgw-last-value"}]`))
 
 }

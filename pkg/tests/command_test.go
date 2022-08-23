@@ -1222,7 +1222,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 			DeviceId:   "color_event",
 			ServiceId:  "urn:infai:ses:service:color_event",
-		}, 200, `["on"]`))
+		}, 200, `[true]`))
 
 		//some services are called as event (timescale call), some as request
 		t.Run("device group color", sendCommand(config, command.CommandMessage{
@@ -1294,7 +1294,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 				DeviceId:   "color_event",
 				ServiceId:  "urn:infai:ses:service:color_event",
 			},
-		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":["on"]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":["on"]}]`))
+		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":[true]}]`))
 
 		t.Run("new timestamp", sendCommandBatch(config, command.BatchRequest{
 			{

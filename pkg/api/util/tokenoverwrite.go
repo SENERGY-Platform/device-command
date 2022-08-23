@@ -19,6 +19,7 @@ package util
 import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"log"
 	"net/http"
 )
 
@@ -40,8 +41,8 @@ func (this *TokenOverwriteMiddleWare) ServeHTTP(w http.ResponseWriter, r *http.R
 	if this.handler != nil {
 		token, err := this.auth.EnsureAccess(this.config)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			log.Println("WARNING: unable to get token, use AuthFallbackToken", err)
+			token = "Bearer " + this.config.AuthFallbackToken
 		}
 		r.Header.Set("Authorization", token)
 		this.handler.ServeHTTP(w, r)

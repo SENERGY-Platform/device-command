@@ -58,6 +58,7 @@
     "auth_user_name": "",
     "auth_password": "",
     "auth_expiration_time_buffer": 2,
+    "auth_fallback_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwOGM0N2E4OC0yYzc5LTQyMGYtODEwNC02NWJkOWViYmU0MWUiLCJleHAiOjE1NDY1MDcyMzMsIm5iZiI6MCwiaWF0IjoxNTQ2NTA3MTczLCJpc3MiOiIiLCJzdWIiOiJmYWxsYmFjay10b2tlbiIsInR5cCI6IkJlYXJlciIsImF6cCI6Im1ndy1kZXZpY2UtY29tbWFuZCIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJ1c2VyIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibWFzdGVyLXJlYWxtIjp7InJvbGVzIjpbXX0sImFjY291bnQiOnsicm9sZXMiOltdfX0sInJvbGVzIjpbInVzZXIiXX0.4d1G3G7o0KtszEJmu-UVO5diw2PqRG0yvbicsaD2SDc",
 
     "device_repo_cache_size_in_mb": 100,
     "kafka_topic_configs":{

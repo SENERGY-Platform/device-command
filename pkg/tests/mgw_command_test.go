@@ -34,10 +34,12 @@ import (
 )
 
 func TestMgwCommand(t *testing.T) {
-	testMgwCommand()(t)
+	fallbackFile := filepath.Join(t.TempDir(), "iot_fallback.json")
+	t.Run("without auth overwrite to fill fallback file", testMgwCommand(fallbackFile, false))
+	t.Run("with auth overwrite", testMgwCommand(fallbackFile, true))
 }
 
-func testMgwCommand() func(t *testing.T) {
+func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *testing.T) {
 	return func(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		defer wg.Wait()
@@ -53,7 +55,8 @@ func testMgwCommand() func(t *testing.T) {
 		config.MarshallerImpl = "mgw"
 		config.UseIotFallback = true
 		config.TimescaleImpl = "mgw"
-		config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
+		config.IotFallbackFile = fallbackPath
+		config.OverwriteAuthToken = useAuthOverwriteFallback
 
 		config.ServerPort, err = GetFreePort()
 		if err != nil {

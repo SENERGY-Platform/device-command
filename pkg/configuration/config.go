@@ -91,6 +91,7 @@ type Config struct {
 	AuthClientId             string  `json:"auth_client_id"`
 	AuthUserName             string  `json:"auth_user_name"`
 	AuthPassword             string  `json:"auth_password"`
+	AuthFallbackToken        string  `json:"auth_fallback_token"`
 }
 
 //loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

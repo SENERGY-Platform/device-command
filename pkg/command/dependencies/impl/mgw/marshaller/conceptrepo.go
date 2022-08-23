@@ -165,6 +165,9 @@ func (this *ConceptRepo) GetRootCharacteristics(ids []string) (result []string) 
 }
 
 func (this *ConceptRepo) registerFunction(f FunctionInfo) {
+	if f.ConceptId == "" {
+		return
+	}
 	concept, ok := this.concepts[f.ConceptId]
 	if !ok {
 		log.Println("WARNING: unable to register function with unknown concept", f)

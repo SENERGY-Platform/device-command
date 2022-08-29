@@ -72,6 +72,7 @@ func GetRouter(config configuration.Config, command Command) http.Handler {
 	if config.OverwriteAuthToken {
 		handler = util.NewTokenOverwrite(config, handler)
 	}
+	handler = util.NewVersionHeaderMiddleware(handler)
 	handler = util.NewCors(handler)
 	handler = util.NewLogger(handler)
 	return handler

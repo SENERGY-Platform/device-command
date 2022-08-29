@@ -33,7 +33,6 @@ type Iot interface {
 	GetDeviceType(token string, id string) (result model.DeviceType, err error)
 	GetDeviceGroup(token string, id string) (result model.DeviceGroup, err error)
 	GetAspectNode(token string, id string) (model.AspectNode, error)
-	GetLastUsedToken() string
 	GetConceptIds(token string) ([]string, error)
 }
 

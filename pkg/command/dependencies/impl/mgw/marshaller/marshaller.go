@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	converterService "github.com/SENERGY-Platform/converter/lib/converter"
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
@@ -35,12 +36,13 @@ import (
 )
 
 func NewMarshaller(ctx context.Context, conf configuration.Config, iot interfaces.Iot) (*Marshaller, error) {
-	marshallerIot, err := NewMarshallerIot(ctx, conf, iot)
+	a := &auth.OpenidToken{}
+	marshallerIot, err := NewMarshallerIot(ctx, conf, a, iot)
 	if err != nil {
 		return nil, err
 	}
 
-	conceptrepo, err := NewConceptRepo(ctx, conf, iot)
+	conceptrepo, err := NewConceptRepo(ctx, conf, a, iot)
 	if err != nil {
 		return nil, err
 	}

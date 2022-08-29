@@ -19,22 +19,31 @@ package marshaller
 import (
 	"context"
 	"errors"
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
+	"log"
 	"net/http"
 )
 
-func NewMarshallerIot(ctx context.Context, conf configuration.Config, iot interfaces.Iot) (result *MarshallerIot, err error) {
-	return &MarshallerIot{iot: iot}, nil
+func NewMarshallerIot(ctx context.Context, conf configuration.Config, a *auth.OpenidToken, iot interfaces.Iot) (result *MarshallerIot, err error) {
+	return &MarshallerIot{iot: iot, auth: a, config: conf}, nil
 }
 
 type MarshallerIot struct {
-	iot interfaces.Iot
+	iot    interfaces.Iot
+	auth   *auth.OpenidToken
+	config configuration.Config
 }
 
 func (this *MarshallerIot) GetAspectNode(id string) (result model.AspectNode, err error) {
-	temp, err := this.iot.GetAspectNode(this.iot.GetLastUsedToken(), id)
+	token, err := this.auth.EnsureAccess(this.config)
+	if err != nil {
+		log.Println("WARNING: unable to get new auth token for GetAspectNode(), use fallback token", err)
+		token = "Bearer " + this.config.AuthFallbackToken
+	}
+	temp, err := this.iot.GetAspectNode(token, id)
 	if err != nil {
 		return result, err
 	}

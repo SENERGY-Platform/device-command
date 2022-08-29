@@ -19,6 +19,7 @@ package marshaller
 import (
 	"context"
 	"errors"
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
@@ -38,6 +39,8 @@ type ConceptRepo struct {
 	characteristicsOfFunction          map[string][]string
 	functionToConcept                  map[string]string
 	mux                                sync.Mutex
+	auth                               *auth.OpenidToken
+	config                             configuration.Config
 }
 
 type ConceptRepoDefault struct {
@@ -45,7 +48,7 @@ type ConceptRepoDefault struct {
 	Characteristics []model.Characteristic
 }
 
-func NewConceptRepo(ctx context.Context, config configuration.Config, iot interfaces.Iot) (result *ConceptRepo, err error) {
+func NewConceptRepo(ctx context.Context, config configuration.Config, auth *auth.OpenidToken, iot interfaces.Iot) (result *ConceptRepo, err error) {
 	result = &ConceptRepo{
 		iot:                                iot,
 		concepts:                           map[string]model.Concept{},
@@ -54,6 +57,8 @@ func NewConceptRepo(ctx context.Context, config configuration.Config, iot interf
 		rootCharacteristicByCharacteristic: map[string]model.Characteristic{},
 		characteristicsOfFunction:          map[string][]string{},
 		functionToConcept:                  map[string]string{},
+		config:                             config,
+		auth:                               auth,
 	}
 	ticker := time.NewTicker(time.Duration(config.MgwConceptRepoRefreshInterval) * time.Second)
 	go func() {
@@ -62,11 +67,9 @@ func NewConceptRepo(ctx context.Context, config configuration.Config, iot interf
 	}()
 	go func() {
 		for range ticker.C {
-			if result.iot.GetLastUsedToken() != "" {
-				err = result.Load()
-				if err != nil {
-					log.Println("WARNING: unable to update concept repository", err)
-				}
+			err = result.Load()
+			if err != nil {
+				log.Println("WARNING: unable to update concept repository", err)
 			}
 		}
 	}()
@@ -179,7 +182,12 @@ func (this *ConceptRepo) registerFunction(f FunctionInfo) {
 }
 
 func (this *ConceptRepo) Load() error {
-	conceptIds, err := this.loadConceptIds()
+	token, err := this.auth.EnsureAccess(this.config)
+	if err != nil {
+		log.Println("WARNING: unable to get new auth token for concept repo Load(), use fallback token", err)
+		token = "Bearer " + this.config.AuthFallbackToken
+	}
+	conceptIds, err := this.loadConceptIds(token)
 	if err != nil {
 		return err
 	}
@@ -191,7 +199,7 @@ func (this *ConceptRepo) Load() error {
 	temp := []Temp{}
 
 	for _, conceptId := range conceptIds {
-		concept, err := this.loadConcept(conceptId)
+		concept, err := this.loadConcept(token, conceptId)
 		if err != nil {
 			return err
 		}
@@ -199,7 +207,7 @@ func (this *ConceptRepo) Load() error {
 			Concept: concept,
 		}
 		for _, characteristicId := range concept.CharacteristicIds {
-			characteristic, err := this.loadCharacteristic(characteristicId)
+			characteristic, err := this.loadCharacteristic(token, characteristicId)
 			if err != nil {
 				return err
 			}
@@ -208,7 +216,7 @@ func (this *ConceptRepo) Load() error {
 		temp = append(temp, element)
 	}
 
-	functionInfos, err := this.loadFunctions()
+	functionInfos, err := this.loadFunctions(token)
 	if err != nil {
 		return err
 	}
@@ -251,8 +259,8 @@ func (this *ConceptRepo) register(concept model.Concept, characteristics []model
 	this.concepts[concept.Id] = concept
 }
 
-func (this *ConceptRepo) loadConceptIds() (ids []string, err error) {
-	return this.iot.GetConceptIds(this.iot.GetLastUsedToken())
+func (this *ConceptRepo) loadConceptIds(token string) (ids []string, err error) {
+	return this.iot.GetConceptIds(token)
 }
 
 type FunctionInfo struct {
@@ -260,8 +268,8 @@ type FunctionInfo struct {
 	ConceptId string `json:"concept_id"`
 }
 
-func (this *ConceptRepo) loadFunctions() (functionInfos []FunctionInfo, err error) {
-	temp, err := this.iot.ListFunctions(this.iot.GetLastUsedToken())
+func (this *ConceptRepo) loadFunctions(token string) (functionInfos []FunctionInfo, err error) {
+	temp, err := this.iot.ListFunctions(token)
 	for _, element := range temp {
 		functionInfos = append(functionInfos, FunctionInfo{
 			Id:        element.Id,
@@ -271,8 +279,8 @@ func (this *ConceptRepo) loadFunctions() (functionInfos []FunctionInfo, err erro
 	return functionInfos, err
 }
 
-func (this *ConceptRepo) loadConcept(id string) (result model.Concept, err error) {
-	concept, err := this.iot.GetConcept(this.iot.GetLastUsedToken(), id)
+func (this *ConceptRepo) loadConcept(token string, id string) (result model.Concept, err error) {
+	concept, err := this.iot.GetConcept(token, id)
 	if err != nil {
 		return result, err
 	}
@@ -280,8 +288,8 @@ func (this *ConceptRepo) loadConcept(id string) (result model.Concept, err error
 	return result, err
 }
 
-func (this *ConceptRepo) loadCharacteristic(id string) (result model.Characteristic, err error) {
-	characteristic, err := this.iot.GetCharacteristic(this.iot.GetLastUsedToken(), id)
+func (this *ConceptRepo) loadCharacteristic(token string, id string) (result model.Characteristic, err error) {
+	characteristic, err := this.iot.GetCharacteristic(token, id)
 	if err != nil {
 		return result, err
 	}

@@ -204,10 +204,6 @@ func (this *Iot) getAspectNode(token string, id string) (result model.AspectNode
 	return
 }
 
-func (this *Iot) GetLastUsedToken() string {
-	return this.lastUsedToken
-}
-
 type IdWrapper struct {
 	Id string `json:"id"`
 }

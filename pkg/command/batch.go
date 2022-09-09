@@ -56,9 +56,9 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 				var code int
 				var temp interface{}
 				if cmd.DeviceId != "" && cmd.ServiceId != "" {
-					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, ebatch)
+					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, ebatch, cmd.CharacteristicId)
 				} else if cmd.GroupId != "" {
-					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, ebatch)
+					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, ebatch, cmd.CharacteristicId)
 				}
 				mux.Lock()
 				defer mux.Unlock()

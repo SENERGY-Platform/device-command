@@ -35,7 +35,8 @@ type CommandMessage struct {
 	//group command
 	GroupId string `json:"group_id,omitempty"`
 
-	DeviceClassId string `json:"device_class_id,omitempty"`
+	DeviceClassId    string `json:"device_class_id,omitempty"`
+	CharacteristicId string `json:"characteristic_id,omitempty"`
 }
 
 func (this CommandMessage) Validate() error {

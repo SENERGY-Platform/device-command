@@ -1183,11 +1183,26 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			ServiceId:  "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
 		}, 200, "[null]"))
 
+		t.Run("device setTemperature in Kelvin", sendCommand(config, command.CommandMessage{
+			FunctionId:       "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
+			Input:            294.15,
+			DeviceId:         "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:        "urn:infai:ses:service:4932d451-3300-4a22-a508-ec740e5789b3",
+			CharacteristicId: "urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683",
+		}, 200, "[null]"))
+
 		t.Run("device getTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
 		}, 200, "[13]"))
+
+		t.Run("device getTemperature in Kelvin", sendCommand(config, command.CommandMessage{
+			FunctionId:       "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			DeviceId:         "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:        "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+			CharacteristicId: "urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683",
+		}, 200, "[286.15]"))
 
 		t.Run("device timeout", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:00549f18-88b5-44c7-adb1-f558e8d53d1d",
@@ -1305,7 +1320,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 		}, 200, `[{"status_code":200,"message":["1970-01-01T01:00:00+01:00"]}]`))
 
 		t.Run("check callcount", func(t *testing.T) {
-			if serviceCallCount["urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1"] != 5 {
+			if serviceCallCount["urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1"] != 6 {
 				t.Error(serviceCallCount)
 			}
 		})

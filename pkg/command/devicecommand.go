@@ -31,15 +31,15 @@ import (
 	"time"
 )
 
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, batch *eventbatch.EventBatch) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout, preferEventValue, batch)
+func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, batch *eventbatch.EventBatch, characteristicId string) (code int, resp interface{}) {
+	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout, preferEventValue, batch, characteristicId)
 	if code == http.StatusOK {
 		resp = []interface{}{resp}
 	}
 	return code, resp
 }
 
-func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, eventBatch *eventbatch.EventBatch) (code int, resp interface{}) {
+func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, eventBatch *eventbatch.EventBatch, characteristicId string) (code int, resp interface{}) {
 	timeoutDuration := this.config.DefaultTimeoutDuration
 	var err error
 	if timeout != "" {
@@ -63,8 +63,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		return http.StatusInternalServerError, "unable to load function: " + err.Error()
 	}
 
-	characteristicId := ""
-	if function.ConceptId != "" {
+	if characteristicId == "" && function.ConceptId != "" {
 		concept, err := this.iot.GetConcept(token.Jwt(), function.ConceptId)
 		if err != nil {
 			return http.StatusInternalServerError, "unable to load concept: " + err.Error()

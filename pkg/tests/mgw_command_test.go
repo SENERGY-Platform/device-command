@@ -683,3 +683,134 @@ func TestShellyError(t *testing.T) {
 	}, 200, `[{"status_code":200,"message":[true]},{"status_code":513,"message":"unable to get event value: missing last value in mgw-last-value"}]`))
 
 }
+
+func TestCharacteristicError(t *testing.T) {
+	iotExport = iotExport2
+	defer func() {
+		iotExport = iotExport1
+	}()
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	config, err := configuration.Load("../../config.json")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	config.Debug = true
+	config.ComImpl = "mgw"
+	config.MarshallerImpl = "mgw"
+	config.UseIotFallback = true
+	config.TimescaleImpl = "mgw"
+	config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
+
+	config.ServerPort, err = GetFreePort()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	devices := map[string]map[string]interface{}{
+		"testOwner": {
+			"/devices/urn:infai:ses:device:79fa231c-45d9-4266-b5fb-2c051bfd8c0d": model.Device{
+				Id:           "urn:infai:ses:device:79fa231c-45d9-4266-b5fb-2c051bfd8c0d",
+				LocalId:      "d1",
+				Name:         "device",
+				DeviceTypeId: "urn:infai:ses:device-type:ca30a161-0bd4-49b8-86eb-8c48e29eb34e",
+			},
+		},
+	}
+
+	config, err = iotEnv(config, ctx, wg, devices)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	config, err = mqttEnv(config, ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	time.Sleep(1 * time.Second)
+
+	config, err = lastValueEnv(config, ctx, wg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+
+	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mqttClient.Publish("event/status_event_lid/relay", 2, true, []byte("on"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		t.Log(topic, string(payload))
+		if strings.HasPrefix(topic, "command/") {
+			msg := mgw.Command{}
+			err = json.Unmarshal(payload, &msg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			parts := strings.Split(topic, "/")
+			deviceLocalId := parts[1]
+			serviceLocalId := parts[2]
+			t.Log(deviceLocalId, serviceLocalId)
+			switch serviceLocalId {
+			case "31712f59-1f7e-445e-8bf1-523cdc5c3a96":
+				msg.Data = ""
+			case "":
+				t.Error("wtf")
+			default:
+				t.Error("unknown service-id", serviceLocalId)
+				return
+			}
+			resp, err := json.Marshal(msg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			err = mqttClient.Publish(strings.Join([]string{"response", deviceLocalId, serviceLocalId}, "/"), 2, false, resp)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	})
+
+	cmd, err := command.New(ctx, config)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = api.Start(ctx, config, cmd)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	t.Run("batch", sendCommandBatch(config, command.BatchRequest{
+		{
+			FunctionId: "urn:infai:ses:controlling-function:ced44f01-7328-43e3-8db0-ecd12f448758",
+			DeviceId:   "urn:infai:ses:device:79fa231c-45d9-4266-b5fb-2c051bfd8c0d",
+			ServiceId:  "urn:infai:ses:service:31712f59-1f7e-445e-8bf1-523cdc5c3a96",
+			AspectId:   "urn:infai:ses:aspect:4f6b9747-1d30-4db1-bbf8-c5904db32771",
+			Input:      map[string]interface{}{"iterations": 1, "customOrder": true, "segment_ids": []string{"1"}},
+		},
+	}, 200, `[{"status_code":200,"message":[null]}]`))
+
+}

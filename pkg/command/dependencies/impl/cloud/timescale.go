@@ -148,7 +148,10 @@ func castQueryResponse(request []interfaces.TimescaleRequest, query TimescaleQue
 			return result, errors.New("timescale: request i index to large for response")
 		}
 		if len(response[i]) != 1 {
-			return result, errors.New("timescale: unexpected response")
+			result = append(result, interfaces.TimescaleResponse{
+				Value: nil,
+			})
+			continue
 		}
 		if len(response[i][0])+1 < j {
 			return result, errors.New("timescale: request j index to large for response")

@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/SENERGY-Platform/converter v0.0.0-20220810123448-27fbbf6ab679
-	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220823072226-6c42d5cf2485
+	github.com/SENERGY-Platform/external-task-worker v0.0.0-20220930074214-1fc14b3a71a3
 	github.com/SENERGY-Platform/marshaller v0.0.0-20220823070456-9df7dd3f42e5
 	github.com/Shopify/sarama v1.22.0
 	github.com/coocood/freecache v1.2.1

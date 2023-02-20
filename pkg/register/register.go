@@ -77,7 +77,11 @@ func (this *Register) WaitWithTimeout(id string, timeout time.Duration) (int, in
 	if !ok {
 		return http.StatusInternalServerError, "unregistered correlation id"
 	}
-	defer delete(this.register, id)
+	defer func() {
+		this.mux.Lock()
+		delete(this.register, id)
+		this.mux.Unlock()
+	}()
 
 	t := time.AfterFunc(timeout, func() {
 		this.Complete(id, http.StatusRequestTimeout, "timeout")

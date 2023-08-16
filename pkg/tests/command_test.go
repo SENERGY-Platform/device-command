@@ -914,7 +914,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		return
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	t.Run("command", sendCommand(config, command.CommandMessage{
 		FunctionId:    "urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33",
@@ -1167,7 +1167,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			return
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 
 		t.Run("device default setTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",

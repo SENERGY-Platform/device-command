@@ -19,6 +19,7 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
@@ -351,13 +352,15 @@ func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *
 			},
 		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: value not found in fallback: function.foobar"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]}]`))
 
+		zeroTimestamp := time.UnixMilli(0).Format(time.RFC3339)
+
 		t.Run("new timestamp", sendCommandBatch(config, command.BatchRequest{
 			{
 				FunctionId: "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290",
 				DeviceId:   "urn:infai:ses:device:timestamp-test",
 				ServiceId:  "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033",
 			},
-		}, 200, `[{"status_code":200,"message":["1970-01-01T01:00:00+01:00"]}]`))
+		}, 200, fmt.Sprintf(`[{"status_code":200,"message":["%v"]}]`, zeroTimestamp)))
 
 		t.Run("device group air getTemperature", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",

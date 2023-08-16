@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/IBM/sarama"
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
@@ -1311,13 +1312,15 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			},
 		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":[true]}]`))
 
+		zeroTimestamp := time.UnixMilli(0).Format(time.RFC3339)
+
 		t.Run("new timestamp", sendCommandBatch(config, command.BatchRequest{
 			{
 				FunctionId: "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290",
 				DeviceId:   "urn:infai:ses:device:timestamp-test",
 				ServiceId:  "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033",
 			},
-		}, 200, `[{"status_code":200,"message":["1970-01-01T01:00:00+01:00"]}]`))
+		}, 200, fmt.Sprintf(`[{"status_code":200,"message":["%v"]}]`, zeroTimestamp)))
 
 		t.Run("check callcount", func(t *testing.T) {
 			if serviceCallCount["urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1"] != 6 {

@@ -23,7 +23,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"log"
 	"strings"
 )
@@ -172,5 +172,5 @@ type Command struct {
 var IdProvider = DefaultIdProviderImpl
 
 func DefaultIdProviderImpl() string {
-	return uuid.NewV4().String()
+	return uuid.NewString()
 }

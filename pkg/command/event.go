@@ -26,6 +26,7 @@ import (
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/serialization"
+	"github.com/SENERGY-Platform/models/go/models"
 	"log"
 	"net/http"
 	"sort"
@@ -104,7 +105,7 @@ func (this *Command) createEventValueFromTimescaleValues(service model.Service, 
 }
 
 func marshalSegmentValue(serializationTo string, value interface{}, rootName string) (string, error) {
-	m, ok := serialization.Get(serializationTo)
+	m, ok := serialization.Get(models.Serialization(serializationTo))
 	if !ok {
 		err := errors.New("unknown serialization")
 		log.Println("ERROR: unknown serialization", serializationTo)

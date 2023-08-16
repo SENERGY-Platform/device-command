@@ -20,42 +20,24 @@ import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/test/docker"
-	"github.com/ory/dockertest/v3"
 	"sync"
 )
 
 func kafkaEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup) (config configuration.Config, err error) {
 	config = initialConfig
 
-	pool, err := dockertest.NewPool("")
+	_, zkIp, err := docker.Zookeeper(ctx, wg)
 	if err != nil {
 		return config, err
 	}
-
-	closeZk, _, zkIp, err := docker.Zookeeper(pool)
-	if err != nil {
-		return config, err
-	}
-	wg.Add(1)
-	go func() {
-		<-ctx.Done()
-		closeZk()
-		wg.Done()
-	}()
 
 	zookeeperUrl := zkIp + ":2181"
 
 	//kafka
-	kafkaUrl, closeKafka, err := docker.Kafka(pool, zookeeperUrl)
+	kafkaUrl, err := docker.Kafka(ctx, wg, zookeeperUrl)
 	if err != nil {
 		return config, err
 	}
-	wg.Add(1)
-	go func() {
-		<-ctx.Done()
-		closeKafka()
-		wg.Done()
-	}()
 
 	config.KafkaUrl = kafkaUrl
 

@@ -113,7 +113,6 @@ func createLibConfig(config configuration.Config) util.Config {
 		KafkaUrl:                        config.KafkaUrl,
 		KafkaConsumerGroup:              config.KafkaConsumerGroup,
 		ResponseTopic:                   config.ResponseTopic,
-		PermissionsUrl:                  config.PermissionsUrl,
 		MarshallerUrl:                   config.MarshallerUrl,
 		GroupScheduler:                  config.GroupScheduler,
 		MetadataResponseTo:              config.MetadataResponseTo,

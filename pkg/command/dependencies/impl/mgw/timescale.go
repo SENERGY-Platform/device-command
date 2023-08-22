@@ -25,6 +25,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -58,6 +59,7 @@ func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleReq
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Println("ERROR: unable to query /last-values", err)
 		return result, err
 	}
 	defer resp.Body.Close()

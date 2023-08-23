@@ -27,6 +27,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -36,11 +37,21 @@ type Timescale struct {
 }
 
 func TimescaleFactory(ctx context.Context, config configuration.Config) (interfaces.Timescale, error) {
-	return NewTimescale(config.TimescaleWrapperUrl), nil
+	return NewTimescale(config.TimescaleWrapperUrl)
 }
 
-func NewTimescale(TimescaleUrl string) *Timescale {
-	return &Timescale{TimescaleWrapperUrl: TimescaleUrl}
+func NewTimescale(TimescaleUrl string) (*Timescale, error) {
+	if !strings.Contains(TimescaleUrl, "://") {
+		TimescaleUrl = "http://" + TimescaleUrl
+	}
+	parsed, err := url.Parse(TimescaleUrl)
+	if err != nil {
+		return nil, err
+	}
+	if parsed.Port() == "" {
+		TimescaleUrl = TimescaleUrl + ":8080"
+	}
+	return &Timescale{TimescaleWrapperUrl: TimescaleUrl}, nil
 }
 
 func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleRequest, timeout time.Duration) (result []interfaces.TimescaleResponse, err error) {

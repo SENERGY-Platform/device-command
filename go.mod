@@ -5,14 +5,15 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/IBM/sarama v1.40.1
+	github.com/IBM/sarama v1.41.0
 	github.com/SENERGY-Platform/converter v0.0.0-20230413113429-b490a96aabba
-	github.com/SENERGY-Platform/external-task-worker v0.0.0-20230816120336-3a1a9821de6f
-	github.com/SENERGY-Platform/marshaller v0.0.0-20230413113821-f8a7bc020739
+	github.com/SENERGY-Platform/external-task-worker v0.0.0-20230824104120-4926477dc6f1
+	github.com/SENERGY-Platform/marshaller v0.0.0-20230824091458-02f9efbd5ba3
+	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
 	github.com/coocood/freecache v1.2.3
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/ory/dockertest/v3 v3.8.1
 	github.com/pkg/errors v0.9.1
@@ -26,7 +27,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/RyanCarrier/dijkstra v1.3.0 // indirect
-	github.com/SENERGY-Platform/models/go v0.0.0-20230724134144-c26fd506045f // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect

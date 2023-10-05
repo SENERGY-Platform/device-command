@@ -76,8 +76,8 @@ type Config struct {
 	MgwProtocolSegment     string `json:"mgw_protocol_segment"`
 	MgwMqttBroker          string `json:"mgw_mqtt_broker"`
 	MgwMqttClientId        string `json:"mgw_mqtt_client_id"`
-	MgwMqttUser            string `json:"mgw_mqtt_user"`
-	MgwMqttPw              string `json:"mgw_mqtt_pw"`
+	MgwMqttUser            string `json:"mgw_mqtt_user" config:"secret"`
+	MgwMqttPw              string `json:"mgw_mqtt_pw" config:"secret"`
 	ComImpl                string `json:"com_impl"`        //"mgw" || "cloud" defaults to "cloud"
 	MarshallerImpl         string `json:"marshaller_impl"` //"mgw" || "cloud" defaults to "cloud"
 	UseIotFallback         bool   `json:"use_iot_fallback"`
@@ -88,13 +88,13 @@ type Config struct {
 	OverwriteAuthToken       bool    `json:"overwrite_auth_token"`
 	AuthExpirationTimeBuffer float64 `json:"auth_expiration_time_buffer"`
 	AuthEndpoint             string  `json:"auth_endpoint"`
-	AuthClientId             string  `json:"auth_client_id"`
-	AuthUserName             string  `json:"auth_user_name"`
-	AuthPassword             string  `json:"auth_password"`
+	AuthClientId             string  `json:"auth_client_id" config:"secret"`
+	AuthUserName             string  `json:"auth_user_name" config:"secret"`
+	AuthPassword             string  `json:"auth_password" config:"secret"`
 	AuthFallbackToken        string  `json:"auth_fallback_token"`
 }
 
-//loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
+// loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
 func Load(location string) (config Config, err error) {
 	file, error := os.Open(location)
 	if error != nil {
@@ -133,10 +133,15 @@ func handleEnvironmentVars(config *Config) {
 	configType := configValue.Type()
 	for index := 0; index < configType.NumField(); index++ {
 		fieldName := configType.Field(index).Name
+		fieldConfig := configType.Field(index).Tag.Get("config")
 		envName := fieldNameToEnvName(fieldName)
 		envValue := os.Getenv(envName)
 		if envValue != "" {
-			fmt.Println("use environment variable: ", envName, " = ", envValue)
+			loggedEnvValue := envValue
+			if strings.Contains(fieldConfig, "secret") {
+				loggedEnvValue = "***"
+			}
+			fmt.Println("use environment variable: ", envName, " = ", loggedEnvValue)
 			if configValue.FieldByName(fieldName).Kind() == reflect.Int64 {
 				i, _ := strconv.ParseInt(envValue, 10, 64)
 				configValue.FieldByName(fieldName).SetInt(i)

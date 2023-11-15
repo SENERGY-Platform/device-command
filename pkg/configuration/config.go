@@ -37,6 +37,11 @@ type Config struct {
 	DeviceManagerUrl    string `json:"device_manager_url"`
 	DeviceRepositoryUrl string `json:"device_repository_url"`
 
+	CacheExpiration                 string   `json:"cache_expiration"`
+	CacheInvalidationAllKafkaTopics []string `json:"cache_invalidation_all_kafka_topics"`
+	DeviceKafkaTopic                string   `json:"device_kafka_topic"`
+	DeviceGroupKafkaTopic           string   `json:"device_group_kafka_topic"`
+
 	TimescaleWrapperUrl string `json:"timescale_wrapper_url"`
 	TimescaleImpl       string `json:"timescale_impl"` //"mgw" || "cloud" defaults to "cloud"
 
@@ -69,8 +74,7 @@ type Config struct {
 
 	TopicSuffixForScaling string `json:"topic_suffix_for_scaling"` //only for kafka & cloud
 
-	DeviceRepoCacheSizeInMb int                            `json:"device_repo_cache_size_in_mb"`
-	KafkaTopicConfigs       map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`
+	KafkaTopicConfigs map[string][]kafka.ConfigEntry `json:"kafka_topic_configs"`
 
 	MgwCorrelationIdPrefix string `json:"mgw_correlation_id_prefix"`
 	MgwProtocolSegment     string `json:"mgw_protocol_segment"`

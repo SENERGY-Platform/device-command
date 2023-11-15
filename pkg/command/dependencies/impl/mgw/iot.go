@@ -19,16 +19,31 @@ package mgw
 import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/cache"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/fallback"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/service-commons/pkg/cache"
+	"github.com/SENERGY-Platform/service-commons/pkg/cache/fallback"
+	"time"
 )
 
 func IotFactory(ctx context.Context, config configuration.Config) (result interfaces.Iot, err error) {
-	fallback, err := fallback.NewFallback(config.IotFallbackFile)
+	cacheConfig := cloud.GetCacheConfig()
+	if config.UseIotFallback && config.IotFallbackFile != "" && config.IotFallbackFile != "-" {
+		cacheConfig.FallbackProvider = fallback.NewProvider(config.IotFallbackFile)
+	}
+	c, err := cache.New(cacheConfig)
 	if err != nil {
 		return result, err
 	}
-	return cloud.NewIot(config, cache.NewCacheWithFallback(fallback), true), nil
+	cacheExpiration := time.Minute
+	if config.CacheExpiration != "" && config.CacheExpiration != "-" {
+		cacheExpiration, err = time.ParseDuration(config.CacheExpiration)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err != nil {
+		return result, err
+	}
+	return cloud.NewIot(config, c, true, cacheExpiration), nil
 }

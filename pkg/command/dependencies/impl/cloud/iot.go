@@ -22,8 +22,9 @@ import (
 	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/service-commons/pkg/cache"
+	"github.com/SENERGY-Platform/service-commons/pkg/signal"
 	"io"
 	"log"
 	"net/http"
@@ -35,32 +36,65 @@ import (
 )
 
 type Iot struct {
-	cache         Cache
-	config        configuration.Config
-	cacheDevices  bool //no caching to ensure access check in repository
-	lastUsedToken string
+	cache           *cache.Cache
+	config          configuration.Config
+	cacheDevices    bool //no caching to ensure access check in repository
+	lastUsedToken   string
+	cacheExpiration time.Duration
 }
 
-type Cache interface {
-	Use(key string, getter func() (interface{}, error), result interface{}) (err error)
-	Set(key string, value []byte)
-	Get(key string) (value []byte, err error)
+func GetCacheConfig() cache.Config {
+	return cache.Config{
+		CacheInvalidationSignalHooks: map[cache.Signal]cache.ToKey{
+			signal.Known.CacheInvalidationAll: nil,
+			signal.Known.FunctionCacheInvalidation: func(signalValue string) (cacheKey string) {
+				return "function." + signalValue
+			},
+			signal.Known.ConceptCacheInvalidation: func(signalValue string) (cacheKey string) {
+				return "concept." + signalValue
+			},
+			signal.Known.DeviceCacheInvalidation: func(signalValue string) (cacheKey string) {
+				return "device." + signalValue
+			},
+			signal.Known.ProtocolInvalidation: func(signalValue string) (cacheKey string) {
+				return "protocol." + signalValue
+			},
+			signal.Known.DeviceTypeCacheInvalidation: func(signalValue string) (cacheKey string) {
+				return "device-type." + signalValue
+			},
+			signal.Known.DeviceGroupInvalidation: func(signalValue string) (cacheKey string) {
+				return "device-group." + signalValue
+			},
+			signal.Known.CharacteristicCacheInvalidation: func(signalValue string) (cacheKey string) {
+				return "characteristics." + signalValue
+			},
+		},
+	}
 }
 
 func IotFactory(ctx context.Context, config configuration.Config) (interfaces.Iot, error) {
-	devicerepository.L1Size = config.DeviceRepoCacheSizeInMb * 1024 * 1024
-	return NewIot(config, &CacheImpl{parent: devicerepository.NewCache()}, false), nil
+	c, err := cache.New(GetCacheConfig())
+	if err != nil {
+		return nil, err
+	}
+	cacheExpiration := time.Minute
+	if config.CacheExpiration != "" && config.CacheExpiration != "-" {
+		cacheExpiration, err = time.ParseDuration(config.CacheExpiration)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return NewIot(config, c, false, cacheExpiration), nil
 }
 
-func NewIot(config configuration.Config, cache Cache, cacheDevices bool) *Iot {
-	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices}
+func NewIot(config configuration.Config, cache *cache.Cache, cacheDevices bool, cacheExpiration time.Duration) *Iot {
+	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration}
 }
 
 func (this *Iot) GetFunction(token string, id string) (result model.Function, err error) {
-	err = this.cache.Use("function."+id, func() (interface{}, error) {
+	return cache.Use(this.cache, "function."+id, func() (model.Function, error) {
 		return this.getFunction(token, id)
-	}, &result)
-	return
+	}, this.cacheExpiration)
 }
 
 func (this *Iot) getFunction(token string, id string) (result model.Function, err error) {
@@ -69,10 +103,9 @@ func (this *Iot) getFunction(token string, id string) (result model.Function, er
 }
 
 func (this *Iot) GetConcept(token string, id string) (result model.Concept, err error) {
-	err = this.cache.Use("concept."+id, func() (interface{}, error) {
+	return cache.Use(this.cache, "concept."+id, func() (model.Concept, error) {
 		return this.getConcept(token, id)
-	}, &result)
-	return
+	}, this.cacheExpiration)
 }
 
 func (this *Iot) getConcept(token string, id string) (result model.Concept, err error) {
@@ -82,10 +115,9 @@ func (this *Iot) getConcept(token string, id string) (result model.Concept, err 
 
 func (this *Iot) GetDevice(token string, id string) (result model.Device, err error) {
 	if this.cacheDevices {
-		err = this.cache.Use("device."+id, func() (interface{}, error) {
+		return cache.Use(this.cache, "device."+id, func() (model.Device, error) {
 			return this.getDevice(token, id)
-		}, &result)
-		return result, err
+		}, this.cacheExpiration)
 	}
 	return this.getDevice(token, id)
 }
@@ -96,10 +128,9 @@ func (this *Iot) getDevice(token string, id string) (result model.Device, err er
 }
 
 func (this *Iot) GetProtocol(token string, id string) (result model.Protocol, err error) {
-	err = this.cache.Use("protocol."+id, func() (interface{}, error) {
+	return cache.Use(this.cache, "protocol."+id, func() (model.Protocol, error) {
 		return this.getProtocol(token, id)
-	}, &result)
-	return
+	}, this.cacheExpiration)
 }
 
 func (this *Iot) getProtocol(token string, id string) (result model.Protocol, err error) {
@@ -128,24 +159,26 @@ func (this *Iot) GetService(token string, device model.Device, id string) (resul
 }
 
 func (this *Iot) getServiceFromCache(id string) (service model.Service, err error) {
-	value, err := this.cache.Get("service." + id)
+	item, err := this.cache.Get("service." + id)
 	if err != nil {
 		return service, err
 	}
-	err = json.Unmarshal(value, &service)
-	return
+	var ok bool
+	service, ok = item.(model.Service)
+	if !ok {
+		err = errors.New("unable to interpret cache value as model.Service")
+	}
+	return service, err
 }
 
 func (this *Iot) saveServiceToCache(service model.Service) {
-	buffer, _ := json.Marshal(service)
-	this.cache.Set("service."+service.Id, buffer)
+	_ = this.cache.Set("service."+service.Id, service, this.cacheExpiration)
 }
 
 func (this *Iot) GetDeviceType(token string, id string) (result model.DeviceType, err error) {
-	err = this.cache.Use("deviceType."+id, func() (interface{}, error) {
+	return cache.Use(this.cache, "device-type."+id, func() (model.DeviceType, error) {
 		return this.getDeviceType(token, id)
-	}, &result)
-	return
+	}, this.cacheExpiration)
 }
 
 func (this *Iot) getDeviceType(token string, id string) (result model.DeviceType, err error) {
@@ -154,10 +187,9 @@ func (this *Iot) getDeviceType(token string, id string) (result model.DeviceType
 }
 
 func (this *Iot) GetDeviceGroup(token string, id string) (result model.DeviceGroup, err error) {
-	err = this.cache.Use("deviceGroup."+id, func() (interface{}, error) {
+	return cache.Use(this.cache, "device-group."+id, func() (model.DeviceGroup, error) {
 		return this.getDeviceGroup(token, id)
-	}, &result)
-	return
+	}, this.cacheExpiration)
 }
 
 func (this *Iot) getDeviceGroup(token string, id string) (result model.DeviceGroup, err error) {
@@ -193,10 +225,9 @@ func (this *Iot) GetJson(token string, endpoint string, result interface{}) (err
 }
 
 func (this *Iot) GetAspectNode(token string, id string) (result model.AspectNode, err error) {
-	err = this.cache.Use("aspect-nodes."+id, func() (interface{}, error) {
+	return cache.Use(this.cache, "aspect-nodes."+id, func() (model.AspectNode, error) {
 		return this.getAspectNode(token, id)
-	}, &result)
-	return
+	}, this.cacheExpiration)
 }
 
 func (this *Iot) getAspectNode(token string, id string) (result model.AspectNode, err error) {
@@ -244,10 +275,9 @@ func (this *Iot) ListFunctions(token string) (functionInfos []model.Function, er
 }
 
 func (this *Iot) GetCharacteristic(token string, id string) (result model.Characteristic, err error) {
-	err = this.cache.Use("characteristics."+id, func() (interface{}, error) {
+	return cache.Use(this.cache, "characteristics."+id, func() (model.Characteristic, error) {
 		return this.getCharacteristic(token, id)
-	}, &result)
-	return
+	}, this.cacheExpiration)
 }
 
 func (this *Iot) getCharacteristic(token string, id string) (result model.Characteristic, err error) {

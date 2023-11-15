@@ -57,6 +57,10 @@ func New(ctx context.Context, config configuration.Config) (cmd *Command, err er
 		t = mgw.TimescaleFactory
 	}
 
+	if config.ComImpl == "cloud" {
+		_ = StartKafkaCacheInvalidator(ctx, config)
+	}
+
 	return NewWithFactories(ctx, config, com, m, iot, t)
 }
 

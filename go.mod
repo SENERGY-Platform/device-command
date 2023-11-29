@@ -7,7 +7,7 @@ toolchain go1.21.0
 require (
 	github.com/IBM/sarama v1.42.1
 	github.com/SENERGY-Platform/converter v0.0.0-20231027124924-d43b98b1b5cc
-	github.com/SENERGY-Platform/external-task-worker v0.0.0-20231115081052-8ad661f7ff21
+	github.com/SENERGY-Platform/external-task-worker v0.0.0-20231129072657-95cff7812513
 	github.com/SENERGY-Platform/marshaller v0.0.0-20231128121458-ed546ad8a870
 	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
 	github.com/SENERGY-Platform/service-commons v0.0.0-20231115074650-7021aeae60e4

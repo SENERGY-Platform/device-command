@@ -6,9 +6,9 @@ toolchain go1.21.0
 
 require (
 	github.com/IBM/sarama v1.42.1
-	github.com/SENERGY-Platform/converter v0.0.3
+	github.com/SENERGY-Platform/converter v0.0.4
 	github.com/SENERGY-Platform/external-task-worker v0.0.2
-	github.com/SENERGY-Platform/marshaller v0.0.2
+	github.com/SENERGY-Platform/marshaller v0.0.3
 	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
 	github.com/SENERGY-Platform/service-commons v0.0.0-20231115074650-7021aeae60e4
 	github.com/eclipse/paho.mqtt.golang v1.4.3
@@ -88,11 +88,11 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
+	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/grpc v1.60.1 // indirect

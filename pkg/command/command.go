@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
+	"github.com/SENERGY-Platform/device-command/pkg/command/metrics"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/register"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
@@ -37,6 +38,7 @@ type Command struct {
 	config     configuration.Config
 	marshaller marshaller.Interface
 	producer   interfaces.Producer
+	metrics    *metrics.Metrics
 }
 
 func New(ctx context.Context, config configuration.Config) (cmd *Command, err error) {
@@ -60,7 +62,6 @@ func New(ctx context.Context, config configuration.Config) (cmd *Command, err er
 	if config.ComImpl == "cloud" {
 		_ = StartKafkaCacheInvalidator(ctx, config)
 	}
-
 	return NewWithFactories(ctx, config, com, m, iot, t)
 }
 
@@ -75,6 +76,7 @@ func NewWithFactories(ctx context.Context, config configuration.Config, comFacto
 	cmd = &Command{
 		config:   config,
 		register: register.New(config.DefaultTimeoutDuration, config.Debug),
+		metrics:  metrics.New(),
 	}
 	cmd.iot, err = iotFactory(ctx, config)
 	if err != nil {
@@ -118,4 +120,8 @@ func (this *Command) Command(token auth.Token, cmd CommandMessage, timeout strin
 		return this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, nil, cmd.CharacteristicId)
 	}
 	return http.StatusBadRequest, "missing device_id, service_id or group_id"
+}
+
+func (this *Command) GetMetricsHttpHandler() *metrics.Metrics {
+	return this.metrics
 }

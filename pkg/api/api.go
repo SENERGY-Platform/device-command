@@ -22,6 +22,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/api/util"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
+	"github.com/SENERGY-Platform/device-command/pkg/command/metrics"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
@@ -35,6 +36,7 @@ import (
 type Command interface {
 	Command(token auth.Token, cmd command.CommandMessage, timeout string, preferEventValue bool) (code int, resp interface{})
 	Batch(token auth.Token, batch command.BatchRequest, timeout string, preferEventValue bool) []command.BatchResultElement
+	GetMetricsHttpHandler() *metrics.Metrics
 }
 
 var endpoints = []func(config configuration.Config, router *httprouter.Router, command Command){}
@@ -64,6 +66,7 @@ func Start(ctx context.Context, config configuration.Config, command Command) (e
 
 func GetRouter(config configuration.Config, command Command) http.Handler {
 	router := httprouter.New()
+	router.Handler(http.MethodGet, "/metrics", command.GetMetricsHttpHandler())
 	for _, e := range endpoints {
 		log.Println("add endpoint: " + runtime.FuncForPC(reflect.ValueOf(e).Pointer()).Name())
 		e(config, router, command)

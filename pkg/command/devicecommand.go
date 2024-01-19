@@ -90,6 +90,9 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		if aspectNode != nil {
 			aspect = *aspectNode
 		}
+
+		this.metrics.LogGetLastEventValue(token.GetUserId(), device.Id, service.Id, functionId)
+
 		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, aspect, eventBatch, timeoutDuration)
 	}
 
@@ -155,6 +158,8 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		},
 		Trace: []messages.Trace{},
 	}
+
+	this.metrics.LogCommandSend(token.GetUserId(), device.Id, service.Id, functionId)
 
 	err = this.producer.SendCommand(protocolMessage)
 	if err != nil {

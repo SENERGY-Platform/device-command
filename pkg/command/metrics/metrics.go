@@ -40,11 +40,16 @@ func New() *Metrics {
 			Name: "device_command_last_event_value_request_count_vec",
 			Help: "counter vec for last-event-value requests",
 		}, []string{"user_id", "device_id", "service_id", "function_id"}),
+		requestsCountVec: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "device_command_requests_count_vec",
+			Help: "counter vec for requests",
+		}, []string{"user_id", "endpoint"}),
 	}
 
 	reg.MustRegister(
 		result.commandsSendCountVec,
 		result.lastEventValueRequestCountVec,
+		result.requestsCountVec,
 	)
 
 	return result
@@ -55,6 +60,7 @@ type Metrics struct {
 
 	commandsSendCountVec          *prometheus.CounterVec
 	lastEventValueRequestCountVec *prometheus.CounterVec
+	requestsCountVec              *prometheus.CounterVec
 }
 
 func (this *Metrics) LogCommandSend(userId string, deviceId string, serviceId string, functionId string) {
@@ -69,4 +75,11 @@ func (this *Metrics) LogGetLastEventValue(userId string, deviceId string, servic
 		return
 	}
 	this.lastEventValueRequestCountVec.WithLabelValues(userId, deviceId, serviceId, functionId).Inc()
+}
+
+func (this *Metrics) LogRequest(userId string, endpoint string) {
+	if this == nil {
+		return
+	}
+	this.requestsCountVec.WithLabelValues(userId, endpoint).Inc()
 }

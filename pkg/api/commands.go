@@ -37,6 +37,9 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		cmd.GetMetricsHttpHandler().LogRequest(token.GetUserId(), "POST /commands")
+
 		preferEventValueStr := request.URL.Query().Get("prefer_event_value")
 		preferEventValue := false
 		if preferEventValueStr != "" {
@@ -71,6 +74,9 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		cmd.GetMetricsHttpHandler().LogRequest(token.GetUserId(), "POST /commands/batch")
+
 		preferEventValueStr := request.URL.Query().Get("prefer_event_value")
 		preferEventValue := false
 		if preferEventValueStr != "" {

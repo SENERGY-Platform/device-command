@@ -5,10 +5,10 @@ go 1.22
 require (
 	github.com/IBM/sarama v1.43.0
 	github.com/SENERGY-Platform/converter v0.0.5
-	github.com/SENERGY-Platform/external-task-worker v0.0.16
-	github.com/SENERGY-Platform/marshaller v0.0.12
+	github.com/SENERGY-Platform/external-task-worker v0.0.17
+	github.com/SENERGY-Platform/marshaller v0.0.13
 	github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38
-	github.com/SENERGY-Platform/service-commons v0.0.0-20240313123621-ce10fbe36496
+	github.com/SENERGY-Platform/service-commons v0.0.0-20240314112519-5bde66831b0d
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0

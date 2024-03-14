@@ -94,6 +94,11 @@ func NewIot(config configuration.Config, cache *cache.Cache, cacheDevices bool, 
 func (this *Iot) GetFunction(token string, id string) (result model.Function, err error) {
 	return cache.Use(this.cache, "function."+id, func() (model.Function, error) {
 		return this.getFunction(token, id)
+	}, func(function model.Function) error {
+		if function.Id == "" {
+			return errors.New("invalid function loaded from cache")
+		}
+		return nil
 	}, this.cacheExpiration)
 }
 
@@ -105,6 +110,11 @@ func (this *Iot) getFunction(token string, id string) (result model.Function, er
 func (this *Iot) GetConcept(token string, id string) (result model.Concept, err error) {
 	return cache.Use(this.cache, "concept."+id, func() (model.Concept, error) {
 		return this.getConcept(token, id)
+	}, func(concept model.Concept) error {
+		if concept.Id == "" {
+			return errors.New("invalid concept loaded from cache")
+		}
+		return nil
 	}, this.cacheExpiration)
 }
 
@@ -117,6 +127,11 @@ func (this *Iot) GetDevice(token string, id string) (result model.Device, err er
 	if this.cacheDevices {
 		return cache.Use(this.cache, "device."+id, func() (model.Device, error) {
 			return this.getDevice(token, id)
+		}, func(device model.Device) error {
+			if device.Id == "" {
+				return errors.New("invalid device loaded from cache")
+			}
+			return nil
 		}, this.cacheExpiration)
 	}
 	return this.getDevice(token, id)
@@ -130,6 +145,11 @@ func (this *Iot) getDevice(token string, id string) (result model.Device, err er
 func (this *Iot) GetProtocol(token string, id string) (result model.Protocol, err error) {
 	return cache.Use(this.cache, "protocol."+id, func() (model.Protocol, error) {
 		return this.getProtocol(token, id)
+	}, func(protocol model.Protocol) error {
+		if protocol.Id == "" {
+			return errors.New("invalid protocol loaded from cache")
+		}
+		return nil
 	}, this.cacheExpiration)
 }
 
@@ -159,15 +179,12 @@ func (this *Iot) GetService(token string, device model.Device, id string) (resul
 }
 
 func (this *Iot) getServiceFromCache(id string) (service model.Service, err error) {
-	item, err := this.cache.Get("service." + id)
-	if err != nil {
-		return service, err
-	}
-	var ok bool
-	service, ok = item.(model.Service)
-	if !ok {
-		err = errors.New("unable to interpret cache value as model.Service")
-	}
+	service, err = cache.Get[model.Service](this.cache, "service."+id, func(service model.Service) error {
+		if service.Id == "" {
+			return errors.New("invalid service loaded from cache")
+		}
+		return nil
+	})
 	return service, err
 }
 
@@ -178,6 +195,11 @@ func (this *Iot) saveServiceToCache(service model.Service) {
 func (this *Iot) GetDeviceType(token string, id string) (result model.DeviceType, err error) {
 	return cache.Use(this.cache, "device-type."+id, func() (model.DeviceType, error) {
 		return this.getDeviceType(token, id)
+	}, func(deviceType model.DeviceType) error {
+		if deviceType.Id == "" {
+			return errors.New("invalid device-type loaded from cache")
+		}
+		return nil
 	}, this.cacheExpiration)
 }
 
@@ -189,6 +211,11 @@ func (this *Iot) getDeviceType(token string, id string) (result model.DeviceType
 func (this *Iot) GetDeviceGroup(token string, id string) (result model.DeviceGroup, err error) {
 	return cache.Use(this.cache, "device-group."+id, func() (model.DeviceGroup, error) {
 		return this.getDeviceGroup(token, id)
+	}, func(group model.DeviceGroup) error {
+		if group.Id == "" {
+			return errors.New("invalid device-group loaded from cache")
+		}
+		return nil
 	}, this.cacheExpiration)
 }
 
@@ -227,6 +254,11 @@ func (this *Iot) GetJson(token string, endpoint string, result interface{}) (err
 func (this *Iot) GetAspectNode(token string, id string) (result model.AspectNode, err error) {
 	return cache.Use(this.cache, "aspect-nodes."+id, func() (model.AspectNode, error) {
 		return this.getAspectNode(token, id)
+	}, func(node model.AspectNode) error {
+		if node.Id == "" {
+			return errors.New("invalid aspect-node loaded from cache")
+		}
+		return nil
 	}, this.cacheExpiration)
 }
 
@@ -277,6 +309,11 @@ func (this *Iot) ListFunctions(token string) (functionInfos []model.Function, er
 func (this *Iot) GetCharacteristic(token string, id string) (result model.Characteristic, err error) {
 	return cache.Use(this.cache, "characteristics."+id, func() (model.Characteristic, error) {
 		return this.getCharacteristic(token, id)
+	}, func(characteristic model.Characteristic) error {
+		if characteristic.Id == "" {
+			return errors.New("invalid characteristic loaded from cache")
+		}
+		return nil
 	}, this.cacheExpiration)
 }
 

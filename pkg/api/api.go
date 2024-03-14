@@ -24,6 +24,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/command/metrics"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/service-commons/pkg/accesslog"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"log"
@@ -77,6 +78,6 @@ func GetRouter(config configuration.Config, command Command) http.Handler {
 	}
 	handler = util.NewVersionHeaderMiddleware(handler)
 	handler = util.NewCors(handler)
-	handler = util.NewLogger(handler)
+	handler = accesslog.New(handler)
 	return handler
 }

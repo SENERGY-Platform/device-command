@@ -4,11 +4,11 @@ go 1.22
 
 require (
 	github.com/IBM/sarama v1.43.2
-	github.com/SENERGY-Platform/converter v0.0.7
-	github.com/SENERGY-Platform/external-task-worker v0.0.19
-	github.com/SENERGY-Platform/marshaller v0.0.14
+	github.com/SENERGY-Platform/converter v0.0.8
+	github.com/SENERGY-Platform/external-task-worker v0.0.20
+	github.com/SENERGY-Platform/marshaller v0.0.15
 	github.com/SENERGY-Platform/models/go v0.0.0-20240627082833-157bd627a94f
-	github.com/SENERGY-Platform/service-commons v0.0.0-20240423132428-8eccbc027e71
+	github.com/SENERGY-Platform/service-commons v0.0.0-20240708085423-94423a495d7f
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/google/uuid v1.6.0
 	github.com/julienschmidt/httprouter v1.3.0

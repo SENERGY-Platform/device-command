@@ -25,6 +25,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/mqtt"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	devicerepomodel "github.com/SENERGY-Platform/device-repository/lib/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"net/http"
 	"path/filepath"
@@ -86,71 +87,158 @@ func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *
 			return
 		}
 
-		devices := map[string]map[string]interface{}{
-			"testOwner": {
-				"/devices/status_event": model.Device{
-					Id:           "status_event",
-					LocalId:      "status_event_lid",
-					Name:         "status_event",
-					DeviceTypeId: "urn:infai:ses:device-type:status_event",
-				},
-				"/devices/urn:infai:ses:device:timestamp-test": model.Device{
-					Id:           "urn:infai:ses:device:timestamp-test",
-					LocalId:      "d1-timestamp",
-					Name:         "d1Name-timestamp",
-					DeviceTypeId: "urn:infai:ses:device-type:24b294e8-4676-4782-8dc9-a008c0d94770",
-				},
-				"/devices/urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866": model.Device{
-					Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
-					LocalId:      "d1",
-					Name:         "d1Name",
-					DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-				},
-				"/devices/temperature2": model.Device{
-					Id:           "temperature2",
-					LocalId:      "d1",
-					Name:         "d1Name",
-					DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-				},
-				"/devices/temperature3": model.Device{
-					Id:           "temperature3",
-					LocalId:      "d1",
-					Name:         "d1Name",
-					DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-				},
-				"/devices/lamp": model.Device{
-					Id:           "lamp",
-					LocalId:      "lamp",
-					Name:         "lamp",
-					DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
-				},
-				"/devices/lamp2": model.Device{
-					Id:           "lamp2",
-					LocalId:      "lamp2",
-					Name:         "lamp2",
-					DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
-				},
-				"/devices/color_event": model.Device{
-					Id:           "color_event",
-					LocalId:      "color_event_lid",
-					Name:         "color_event",
-					DeviceTypeId: "urn:infai:ses:device-type:color_event",
-				},
-				"/device-groups/group_temperature": model.DeviceGroup{
-					Id:        "group_temperature",
-					DeviceIds: []string{"urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866", "temperature2", "temperature3"},
-				},
-				"/device-groups/group_color": model.DeviceGroup{
-					Id:        "group_color",
-					DeviceIds: []string{"color_event", "lamp", "lamp2"},
-				},
-			},
-		}
-
-		config, err = iotEnv(config, ctx, wg, devices)
+		config, db, err := iotEnv(config, ctx, wg, export1)
 		if err != nil {
 			t.Error(err)
 			return
+		}
+
+		protocols := []model.Protocol{}
+		for _, p := range protocols {
+			err = db.SetProtocol(ctx, p)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		deviceClasses := []model.DeviceClass{}
+		for _, dc := range deviceClasses {
+			err = db.SetDeviceClass(ctx, dc)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		characteristics := []model.Characteristic{}
+		for _, c := range characteristics {
+			err = db.SetCharacteristic(ctx, c)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		concepts := []model.Concept{}
+		for _, c := range concepts {
+			err = db.SetConcept(ctx, c)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		functions := []model.Function{}
+
+		for _, f := range functions {
+			err = db.SetFunction(ctx, f)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		deviceTypes := []model.DeviceType{}
+		for _, dt := range deviceTypes {
+			err = db.SetDeviceType(ctx, dt)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		devices := []model.Device{
+			{
+				Id:           "status_event",
+				LocalId:      "status_event_lid",
+				Name:         "status_event",
+				DeviceTypeId: "urn:infai:ses:device-type:status_event",
+			},
+			{
+				Id:           "urn:infai:ses:device:timestamp-test",
+				LocalId:      "d1-timestamp",
+				Name:         "d1Name-timestamp",
+				DeviceTypeId: "urn:infai:ses:device-type:24b294e8-4676-4782-8dc9-a008c0d94770",
+			},
+			{
+				Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			{
+				Id:           "temperature2",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			{
+				Id:           "temperature3",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			{
+				Id:           "lamp",
+				LocalId:      "lamp",
+				Name:         "lamp",
+				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+			},
+			{
+				Id:           "lamp2",
+				LocalId:      "lamp2",
+				Name:         "lamp2",
+				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+			},
+			{
+				Id:           "color_event",
+				LocalId:      "color_event_lid",
+				Name:         "color_event",
+				DeviceTypeId: "urn:infai:ses:device-type:color_event",
+			},
+		}
+
+		for _, device := range devices {
+			err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
+				Device: device,
+			})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
+				UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+			})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		deviceGroups := []model.DeviceGroup{
+			{
+				Id:        "group_temperature",
+				DeviceIds: []string{"urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866", "temperature2", "temperature3"},
+			},
+			{
+				Id:        "group_color",
+				DeviceIds: []string{"color_event", "lamp", "lamp2"},
+			},
+		}
+		for _, dg := range deviceGroups {
+			err = db.SetDeviceGroup(ctx, dg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			err = db.SetRights("device-groups", dg.Id, devicerepomodel.ResourceRights{
+				UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+			})
+			if err != nil {
+				t.Error(err)
+				return
+			}
 		}
 
 		config, err = mqttEnv(config, ctx, wg)
@@ -418,27 +506,113 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 		return
 	}
 
-	devices := map[string]map[string]interface{}{
-		"testOwner": {
-			"/devices/status_event": model.Device{
-				Id:           "status_event",
-				LocalId:      "status_event_lid",
-				Name:         "status_event",
-				DeviceTypeId: "urn:infai:ses:device-type:status_event",
-			},
-			"/devices/status_event_2": model.Device{
-				Id:           "status_event_2",
-				LocalId:      "status_event_lid_2",
-				Name:         "status_event 2",
-				DeviceTypeId: "urn:infai:ses:device-type:status_event",
-			},
-		},
-	}
-
-	config, err = iotEnv(config, ctx, wg, devices)
+	config, db, err := iotEnv(config, ctx, wg, export1)
 	if err != nil {
 		t.Error(err)
 		return
+	}
+
+	protocols := []model.Protocol{}
+	for _, p := range protocols {
+		err = db.SetProtocol(ctx, p)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceClasses := []model.DeviceClass{}
+	for _, dc := range deviceClasses {
+		err = db.SetDeviceClass(ctx, dc)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	characteristics := []model.Characteristic{}
+	for _, c := range characteristics {
+		err = db.SetCharacteristic(ctx, c)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	concepts := []model.Concept{}
+	for _, c := range concepts {
+		err = db.SetConcept(ctx, c)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	functions := []model.Function{}
+
+	for _, f := range functions {
+		err = db.SetFunction(ctx, f)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceTypes := []model.DeviceType{}
+	for _, dt := range deviceTypes {
+		err = db.SetDeviceType(ctx, dt)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	devices := []model.Device{
+		{
+			Id:           "status_event",
+			LocalId:      "status_event_lid",
+			Name:         "status_event",
+			DeviceTypeId: "urn:infai:ses:device-type:status_event",
+		},
+		{
+			Id:           "status_event_2",
+			LocalId:      "status_event_lid_2",
+			Name:         "status_event 2",
+			DeviceTypeId: "urn:infai:ses:device-type:status_event",
+		},
+	}
+
+	for _, device := range devices {
+		err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
+			Device: device,
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
+			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceGroups := []model.DeviceGroup{}
+	for _, dg := range deviceGroups {
+		err = db.SetDeviceGroup(ctx, dg)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = db.SetRights("device-groups", dg.Id, devicerepomodel.ResourceRights{
+			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	config, err = mqttEnv(config, ctx, wg)
@@ -564,27 +738,113 @@ func TestShellyError(t *testing.T) {
 		return
 	}
 
-	devices := map[string]map[string]interface{}{
-		"testOwner": {
-			"/devices/status_event": model.Device{
-				Id:           "status_event",
-				LocalId:      "status_event_lid",
-				Name:         "status_event",
-				DeviceTypeId: "urn:infai:ses:device-type:1d5375f0-7d7f-46ab-956e-1d7e7ef51826",
-			},
-			"/devices/status_event_2": model.Device{
-				Id:           "status_event_2",
-				LocalId:      "status_event_lid_2",
-				Name:         "status_event 2",
-				DeviceTypeId: "urn:infai:ses:device-type:1d5375f0-7d7f-46ab-956e-1d7e7ef51826",
-			},
-		},
-	}
-
-	config, err = iotEnv(config, ctx, wg, devices)
+	config, db, err := iotEnv(config, ctx, wg, export1)
 	if err != nil {
 		t.Error(err)
 		return
+	}
+
+	protocols := []model.Protocol{}
+	for _, p := range protocols {
+		err = db.SetProtocol(ctx, p)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceClasses := []model.DeviceClass{}
+	for _, dc := range deviceClasses {
+		err = db.SetDeviceClass(ctx, dc)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	characteristics := []model.Characteristic{}
+	for _, c := range characteristics {
+		err = db.SetCharacteristic(ctx, c)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	concepts := []model.Concept{}
+	for _, c := range concepts {
+		err = db.SetConcept(ctx, c)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	functions := []model.Function{}
+
+	for _, f := range functions {
+		err = db.SetFunction(ctx, f)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceTypes := []model.DeviceType{}
+	for _, dt := range deviceTypes {
+		err = db.SetDeviceType(ctx, dt)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	devices := []model.Device{
+		{
+			Id:           "status_event",
+			LocalId:      "status_event_lid",
+			Name:         "status_event",
+			DeviceTypeId: "urn:infai:ses:device-type:1d5375f0-7d7f-46ab-956e-1d7e7ef51826",
+		},
+		{
+			Id:           "status_event_2",
+			LocalId:      "status_event_lid_2",
+			Name:         "status_event 2",
+			DeviceTypeId: "urn:infai:ses:device-type:1d5375f0-7d7f-46ab-956e-1d7e7ef51826",
+		},
+	}
+
+	for _, device := range devices {
+		err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
+			Device: device,
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
+			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceGroups := []model.DeviceGroup{}
+	for _, dg := range deviceGroups {
+		err = db.SetDeviceGroup(ctx, dg)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = db.SetRights("device-groups", dg.Id, devicerepomodel.ResourceRights{
+			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	config, err = mqttEnv(config, ctx, wg)
@@ -688,10 +948,6 @@ func TestShellyError(t *testing.T) {
 }
 
 func TestCharacteristicError(t *testing.T) {
-	iotExport = iotExport2
-	defer func() {
-		iotExport = iotExport1
-	}()
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -714,21 +970,36 @@ func TestCharacteristicError(t *testing.T) {
 		return
 	}
 
-	devices := map[string]map[string]interface{}{
-		"testOwner": {
-			"/devices/urn:infai:ses:device:79fa231c-45d9-4266-b5fb-2c051bfd8c0d": model.Device{
-				Id:           "urn:infai:ses:device:79fa231c-45d9-4266-b5fb-2c051bfd8c0d",
-				LocalId:      "d1",
-				Name:         "device",
-				DeviceTypeId: "urn:infai:ses:device-type:ca30a161-0bd4-49b8-86eb-8c48e29eb34e",
-			},
-		},
-	}
-
-	config, err = iotEnv(config, ctx, wg, devices)
+	config, db, err := iotEnv(config, ctx, wg, export2)
 	if err != nil {
 		t.Error(err)
 		return
+	}
+
+	devices := []model.Device{
+		{
+			Id:           "urn:infai:ses:device:79fa231c-45d9-4266-b5fb-2c051bfd8c0d",
+			LocalId:      "d1",
+			Name:         "device",
+			DeviceTypeId: "urn:infai:ses:device-type:ca30a161-0bd4-49b8-86eb-8c48e29eb34e",
+		},
+	}
+
+	for _, device := range devices {
+		err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
+			Device: device,
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
+			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	config, err = mqttEnv(config, ctx, wg)

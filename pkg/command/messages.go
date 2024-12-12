@@ -18,8 +18,9 @@ package command
 
 import (
 	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"errors"
+	"hash/maphash"
 	"strconv"
 )
 
@@ -55,10 +56,10 @@ func (this CommandMessage) Validate() error {
 	return errors.New("missing device_id, service_id or group_id")
 }
 
-func (this CommandMessage) Hash() string {
+func (this CommandMessage) Hash(seed maphash.Seed) uint64 {
 	var b bytes.Buffer
-	gob.NewEncoder(&b).Encode(this)
-	return string(b.Bytes())
+	json.NewEncoder(&b).Encode(this)
+	return maphash.Bytes(seed, b.Bytes()) //base64.StdEncoding.EncodeToString(b.Bytes())
 }
 
 type BatchRequest []CommandMessage

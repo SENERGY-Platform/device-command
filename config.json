@@ -28,9 +28,7 @@
 
     "response_worker_count":20,
     "marshaller_url":"http://marshaller:8080",
-    "device_manager_url":"http://device-manager:8080",
     "device_repository_url":"http://device-repository:8080",
-    "permissions_url":"http://query.permissions:8080",
 
     "mgw_correlation_id_prefix": "device-command-",
     "mgw_protocol_segment": "data",

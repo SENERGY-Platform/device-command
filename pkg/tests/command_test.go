@@ -27,6 +27,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	devicerepomodel "github.com/SENERGY-Platform/device-repository/lib/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
@@ -757,85 +758,176 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		return
 	}
 
-	devices := map[string]map[string]interface{}{
-		"testOwner": {
-			"/functions/urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33": model.Function{
-				Id:          "urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33",
-				Name:        "Set Color Temperature",
-				DisplayName: "",
-				Description: "",
-				ConceptId:   "urn:infai:ses:concept:efb42538-43d3-41fc-9a65-37f0bd81f97a",
-				RdfType:     "https://senergy.infai.org/ontology/ControllingFunction",
-			},
-			"/concepts/urn:infai:ses:concept:efb42538-43d3-41fc-9a65-37f0bd81f97a": model.Concept{
-				Id:                   "urn:infai:ses:concept:efb42538-43d3-41fc-9a65-37f0bd81f97a",
-				Name:                 "Color Temperature",
-				CharacteristicIds:    []string{"urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683"},
-				BaseCharacteristicId: "urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683",
-			},
-			"/characteristics/urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683": model.Characteristic{
-				Id:                 "urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683",
-				Name:               "Kelvin (Temperature)",
-				DisplayUnit:        "K",
-				Type:               "https://schema.org/Float",
-				MinValue:           nil,
-				MaxValue:           nil,
-				Value:              nil,
-				SubCharacteristics: nil,
-			},
-			"/device-classes/urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86": model.DeviceClass{
-				Id:    "urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86",
-				Image: "https://i.imgur.com/OZOqLcR.png",
-				Name:  "Lamp",
-			},
-			"/devices/urn:infai:ses:device:423a2718-dea0-4f69-85a3-626c52de175b": model.Device{
-				Id:           "urn:infai:ses:device:423a2718-dea0-4f69-85a3-626c52de175b",
-				LocalId:      "618dfabb-c6a8-4d59-a338-ad9d82735ea2",
-				Name:         "lampe 1",
-				DeviceTypeId: "urn:infai:ses:device-type:57871169-38a8-40cd-871b-184b99776ca3",
-			},
-			"/devices/urn:infai:ses:device:9cba27cf-323c-4f55-8c57-0910bc3be990": model.Device{
-				Id:           "urn:infai:ses:device:9cba27cf-323c-4f55-8c57-0910bc3be990",
-				LocalId:      "52f8272c-e1b3-43e1-9954-7d31470392b9",
-				Name:         "lampe 2",
-				DeviceTypeId: "urn:infai:ses:device-type:57871169-38a8-40cd-871b-184b99776ca3",
-			},
-			"/protocols/urn:infai:ses:protocol:3b59ea31-da98-45fd-a354-1b9bd06b837e": model.Protocol{
-				Id:               "urn:infai:ses:protocol:3b59ea31-da98-45fd-a354-1b9bd06b837e",
-				Name:             "moses",
-				Handler:          "moses",
-				ProtocolSegments: []model.ProtocolSegment{{Id: "urn:infai:ses:protocol-segment:05f1467c-95c8-4a83-a1ed-1c8369fd158a", Name: "payload"}},
-			},
-			"/device-types/urn:infai:ses:device-type:57871169-38a8-40cd-871b-184b99776ca3": dt,
-			"/device-groups/urn:infai:ses:device-group:be0e1dff-6325-4a1a-abbf-9e442c9cfdc2": model.DeviceGroup{
-				Id:       "urn:infai:ses:device-group:be0e1dff-6325-4a1a-abbf-9e442c9cfdc2",
-				Name:     "Lampen",
-				Image:    "",
-				Criteria: nil,
-				DeviceIds: []string{
-					"urn:infai:ses:device:423a2718-dea0-4f69-85a3-626c52de175b",
-					"urn:infai:ses:device:9cba27cf-323c-4f55-8c57-0910bc3be990",
-				},
-				CriteriaShort: []string{
-					"urn:infai:ses:controlling-function:2f35150b-9df7-4cad-95bc-165fa00219fd__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
-					"urn:infai:ses:controlling-function:79e7914b-f303-4a7d-90af-dee70db05fd9__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
-					"urn:infai:ses:measuring-function:c51a6ea5-90c3-4223-9052-6fe4136386cd_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
-					"urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
-					"urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
-					"urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
-					"urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
-					"urn:infai:ses:measuring-function:fb0f474f-c1d7-4a90-971b-a0b9915968f0_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
-					"urn:infai:ses:controlling-function:6ce74d6d-7acb-40b7-aac7-49daca214e85__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
-					"urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
-				},
-			},
-		},
-	}
-
-	config, err = iotEnv(config, ctx, wg, devices)
+	config, db, err := iotEnv(config, ctx, wg, export1)
 	if err != nil {
 		t.Error(err)
 		return
+	}
+
+	protocols := []model.Protocol{
+		{
+			Id:               "urn:infai:ses:protocol:3b59ea31-da98-45fd-a354-1b9bd06b837e",
+			Name:             "moses",
+			Handler:          "moses",
+			ProtocolSegments: []model.ProtocolSegment{{Id: "urn:infai:ses:protocol-segment:05f1467c-95c8-4a83-a1ed-1c8369fd158a", Name: "payload"}},
+		},
+	}
+	for _, p := range protocols {
+		err = db.SetProtocol(ctx, p)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceClasses := []model.DeviceClass{
+		{
+			Id:    "urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86",
+			Image: "https://i.imgur.com/OZOqLcR.png",
+			Name:  "Lamp",
+		},
+	}
+	for _, dc := range deviceClasses {
+		err = db.SetDeviceClass(ctx, dc)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	characteristics := []model.Characteristic{
+		{
+			Id:                 "urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683",
+			Name:               "Kelvin (Temperature)",
+			DisplayUnit:        "K",
+			Type:               "https://schema.org/Float",
+			MinValue:           nil,
+			MaxValue:           nil,
+			Value:              nil,
+			SubCharacteristics: nil,
+		},
+	}
+	for _, c := range characteristics {
+		err = db.SetCharacteristic(ctx, c)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	concepts := []model.Concept{
+		{
+			Id:                   "urn:infai:ses:concept:efb42538-43d3-41fc-9a65-37f0bd81f97a",
+			Name:                 "Color Temperature",
+			CharacteristicIds:    []string{"urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683"},
+			BaseCharacteristicId: "urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683",
+		},
+	}
+	for _, c := range concepts {
+		err = db.SetConcept(ctx, c)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	functions := []model.Function{
+		{
+			Id:          "urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33",
+			Name:        "Set Color Temperature",
+			DisplayName: "",
+			Description: "",
+			ConceptId:   "urn:infai:ses:concept:efb42538-43d3-41fc-9a65-37f0bd81f97a",
+			RdfType:     "https://senergy.infai.org/ontology/ControllingFunction",
+		},
+	}
+
+	for _, f := range functions {
+		err = db.SetFunction(ctx, f)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceTypes := []model.DeviceType{dt}
+	for _, dt := range deviceTypes {
+		err = db.SetDeviceType(ctx, dt)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	devices := []model.Device{
+		{
+			Id:           "urn:infai:ses:device:423a2718-dea0-4f69-85a3-626c52de175b",
+			LocalId:      "618dfabb-c6a8-4d59-a338-ad9d82735ea2",
+			Name:         "lampe 1",
+			DeviceTypeId: "urn:infai:ses:device-type:57871169-38a8-40cd-871b-184b99776ca3",
+		},
+		{
+			Id:           "urn:infai:ses:device:9cba27cf-323c-4f55-8c57-0910bc3be990",
+			LocalId:      "52f8272c-e1b3-43e1-9954-7d31470392b9",
+			Name:         "lampe 2",
+			DeviceTypeId: "urn:infai:ses:device-type:57871169-38a8-40cd-871b-184b99776ca3",
+		},
+	}
+
+	for _, device := range devices {
+		err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
+			Device: device,
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
+			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	deviceGroups := []model.DeviceGroup{
+		{
+			Id:       "urn:infai:ses:device-group:be0e1dff-6325-4a1a-abbf-9e442c9cfdc2",
+			Name:     "Lampen",
+			Image:    "",
+			Criteria: nil,
+			DeviceIds: []string{
+				"urn:infai:ses:device:423a2718-dea0-4f69-85a3-626c52de175b",
+				"urn:infai:ses:device:9cba27cf-323c-4f55-8c57-0910bc3be990",
+			},
+			CriteriaShort: []string{
+				"urn:infai:ses:controlling-function:2f35150b-9df7-4cad-95bc-165fa00219fd__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
+				"urn:infai:ses:controlling-function:79e7914b-f303-4a7d-90af-dee70db05fd9__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
+				"urn:infai:ses:measuring-function:c51a6ea5-90c3-4223-9052-6fe4136386cd_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
+				"urn:infai:ses:measuring-function:bdb6a7c8-4a3d-4fe0-bab3-ce02e09b5869_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
+				"urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
+				"urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
+				"urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
+				"urn:infai:ses:measuring-function:fb0f474f-c1d7-4a90-971b-a0b9915968f0_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
+				"urn:infai:ses:controlling-function:6ce74d6d-7acb-40b7-aac7-49daca214e85__urn:infai:ses:device-class:14e56881-16f9-4120-bb41-270a43070c86_request",
+				"urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0_urn:infai:ses:aspect:a7470d73-dde3-41fc-92bd-f16bb28f2da6__request",
+			},
+		},
+	}
+	for _, dg := range deviceGroups {
+		err = db.SetDeviceGroup(ctx, dg)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = db.SetRights("device-groups", dg.Id, devicerepomodel.ResourceRights{
+			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	config, err = kafkaEnv(config, ctx, wg)
@@ -986,65 +1078,97 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			return
 		}
 
-		devices := map[string]map[string]interface{}{
-			"testOwner": {
-				"/devices/urn:infai:ses:device:timestamp-test": model.Device{
-					Id:           "urn:infai:ses:device:timestamp-test",
-					LocalId:      "d1-timestamp",
-					Name:         "d1Name-timestamp",
-					DeviceTypeId: "urn:infai:ses:device-type:24b294e8-4676-4782-8dc9-a008c0d94770",
-				},
-				"/devices/urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866": model.Device{
-					Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
-					LocalId:      "d1",
-					Name:         "d1Name",
-					DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-				},
-				"/devices/temperature2": model.Device{
-					Id:           "temperature2",
-					LocalId:      "d1",
-					Name:         "d1Name",
-					DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-				},
-				"/devices/temperature3": model.Device{
-					Id:           "temperature3",
-					LocalId:      "d1",
-					Name:         "d1Name",
-					DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-				},
-				"/devices/lamp": model.Device{
-					Id:           "lamp",
-					LocalId:      "lamp",
-					Name:         "lamp",
-					DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
-				},
-				"/devices/lamp2": model.Device{
-					Id:           "lamp2",
-					LocalId:      "lamp2",
-					Name:         "lamp2",
-					DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
-				},
-				"/devices/color_event": model.Device{
-					Id:           "color_event",
-					LocalId:      "color_event",
-					Name:         "color_event",
-					DeviceTypeId: "urn:infai:ses:device-type:color_event",
-				},
-				"/device-groups/group_temperature": model.DeviceGroup{
-					Id:        "group_temperature",
-					DeviceIds: []string{"urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866", "temperature2", "temperature3"},
-				},
-				"/device-groups/group_color": model.DeviceGroup{
-					Id:        "group_color",
-					DeviceIds: []string{"color_event", "lamp", "lamp2"},
-				},
-			},
-		}
-
-		config, err = iotEnv(config, ctx, wg, devices)
+		config, db, err := iotEnv(config, ctx, wg, export1)
 		if err != nil {
 			t.Error(err)
 			return
+		}
+
+		devices := []model.Device{
+			{
+				Id:           "urn:infai:ses:device:timestamp-test",
+				LocalId:      "d1-timestamp",
+				Name:         "d1Name-timestamp",
+				DeviceTypeId: "urn:infai:ses:device-type:24b294e8-4676-4782-8dc9-a008c0d94770",
+			},
+			{
+				Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			{
+				Id:           "temperature2",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			{
+				Id:           "temperature3",
+				LocalId:      "d1",
+				Name:         "d1Name",
+				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+			},
+			{
+				Id:           "lamp",
+				LocalId:      "lamp",
+				Name:         "lamp",
+				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+			},
+			{
+				Id:           "lamp2",
+				LocalId:      "lamp2",
+				Name:         "lamp2",
+				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+			},
+			{
+				Id:           "color_event",
+				LocalId:      "color_event",
+				Name:         "color_event",
+				DeviceTypeId: "urn:infai:ses:device-type:color_event",
+			},
+		}
+
+		for _, device := range devices {
+			err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
+				Device: device,
+			})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
+				UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+			})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+
+		deviceGroups := []model.DeviceGroup{
+			{
+				Id:        "group_temperature",
+				DeviceIds: []string{"urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866", "temperature2", "temperature3"},
+			},
+			{
+				Id:        "group_color",
+				DeviceIds: []string{"color_event", "lamp", "lamp2"},
+			},
+		}
+		for _, dg := range deviceGroups {
+			err = db.SetDeviceGroup(ctx, dg)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			err = db.SetRights("device-groups", dg.Id, devicerepomodel.ResourceRights{
+				UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+			})
+			if err != nil {
+				t.Error(err)
+				return
+			}
 		}
 
 		config, err = kafkaEnv(config, ctx, wg)
@@ -1215,7 +1339,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			FunctionId: "foobar",
 			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
-		}, 500, `"unable to load function: not found"`))
+		}, 500, `"unable to load function: unexpected statuscode 404: not found\n"`))
 
 		t.Run("device color", sendCommand(config, command.CommandMessage{
 			FunctionId: "urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599",
@@ -1310,7 +1434,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 				DeviceId:   "color_event",
 				ServiceId:  "urn:infai:ses:service:color_event",
 			},
-		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: not found"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":[true]}]`))
+		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: unexpected statuscode 404: not found\n"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":[true]}]`))
 
 		zeroTimestamp := time.UnixMilli(0).Format(time.RFC3339)
 

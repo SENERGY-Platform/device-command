@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/signal"
@@ -30,7 +31,6 @@ import (
 	"net/http"
 	"net/url"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -41,6 +41,7 @@ type Iot struct {
 	cacheDevices    bool //no caching to ensure access check in repository
 	lastUsedToken   string
 	cacheExpiration time.Duration
+	client          client.Interface
 }
 
 func GetCacheConfig() cache.Config {
@@ -88,7 +89,7 @@ func IotFactory(ctx context.Context, config configuration.Config) (interfaces.Io
 }
 
 func NewIot(config configuration.Config, cache *cache.Cache, cacheDevices bool, cacheExpiration time.Duration) *Iot {
-	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration}
+	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration, client: client.NewClient(config.DeviceRepositoryUrl)}
 }
 
 func (this *Iot) GetFunction(token string, id string) (result model.Function, err error) {
@@ -103,7 +104,7 @@ func (this *Iot) GetFunction(token string, id string) (result model.Function, er
 }
 
 func (this *Iot) getFunction(token string, id string) (result model.Function, err error) {
-	err = this.GetJson(token, this.config.DeviceManagerUrl+"/functions/"+url.PathEscape(id), &result)
+	result, err, _ = this.client.GetFunction(id)
 	return
 }
 
@@ -119,7 +120,7 @@ func (this *Iot) GetConcept(token string, id string) (result model.Concept, err 
 }
 
 func (this *Iot) getConcept(token string, id string) (result model.Concept, err error) {
-	err = this.GetJson(token, this.config.DeviceManagerUrl+"/concepts/"+url.PathEscape(id), &result)
+	result, err, _ = this.client.GetConceptWithoutCharacteristics(id)
 	return
 }
 
@@ -163,7 +164,7 @@ func (this *Iot) GetService(token string, device model.Device, id string) (resul
 	if err != nil {
 		dt, err := this.GetDeviceType(token, device.DeviceTypeId)
 		if err != nil {
-			log.Println("ERROR: unable to load device-type", device.DeviceTypeId, token)
+			log.Println("ERROR: unable to load device-type", device.DeviceTypeId)
 			return result, err
 		}
 		for _, service := range dt.Services {
@@ -272,12 +273,15 @@ type IdWrapper struct {
 }
 
 func (this *Iot) GetConceptIds(token string) (ids []string, err error) {
-	limit := 100
+	limit := 1000
 	offset := 0
-	temp := []IdWrapper{}
+	temp := []model.Concept{}
 	for len(temp) == limit || offset == 0 {
-		temp = []IdWrapper{}
-		err = this.GetJson(token, this.config.PermissionsUrl+"/v3/resources/concepts?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset)+"&sort=name.asc&rights=r", &temp)
+		temp, _, err, _ = this.client.ListConcepts(client.ConceptListOptions{
+			Limit:  int64(limit),
+			Offset: int64(offset),
+			SortBy: "name.asc",
+		})
 		if err != nil {
 			return ids, err
 		}
@@ -290,13 +294,15 @@ func (this *Iot) GetConceptIds(token string) (ids []string, err error) {
 }
 
 func (this *Iot) ListFunctions(token string) (functionInfos []model.Function, err error) {
-	limit := 100
+	limit := 1000
 	offset := 0
 	temp := []model.Function{}
 	for len(temp) == limit || offset == 0 {
-		temp = []model.Function{}
-		endpoint := this.config.PermissionsUrl + "/v3/resources/functions?limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset) + "&sort=name.asc&rights=r"
-		err = this.GetJson(token, endpoint, &temp)
+		temp, _, err, _ = this.client.ListFunctions(client.FunctionListOptions{
+			Limit:  int64(limit),
+			Offset: int64(offset),
+			SortBy: "name.asc",
+		})
 		if err != nil {
 			return functionInfos, err
 		}
@@ -318,6 +324,6 @@ func (this *Iot) GetCharacteristic(token string, id string) (result model.Charac
 }
 
 func (this *Iot) getCharacteristic(token string, id string) (result model.Characteristic, err error) {
-	err = this.GetJson(token, this.config.DeviceManagerUrl+"/characteristics/"+url.PathEscape(id), &result)
+	result, err, _ = this.client.GetCharacteristic(id)
 	return
 }

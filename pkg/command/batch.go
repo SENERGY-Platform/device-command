@@ -20,6 +20,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/eventbatch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"hash/maphash"
 	"log"
 	"sync"
 )
@@ -28,28 +29,29 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 	if len(batch) == 0 {
 		return []BatchResultElement{}
 	}
-
-	result := make([]BatchResultElement, len(batch))
-	wg := sync.WaitGroup{}
-	mux := sync.Mutex{}
-
-	resultIndexMap := map[string][]int{}
-	for i, cmd := range batch {
-		hash := cmd.Hash()
-		resultIndexMap[hash] = append(resultIndexMap[hash], i)
-	}
-	isAlreadySend := map[string]bool{}
-
 	ebatch, err := this.GetEventBatch(token, batch, preferEventValue)
 	if err != nil {
 		log.Println("WARNING: unable to create event batch --> run without batching", err)
 		ebatch = nil
 	}
 
+	result := make([]BatchResultElement, len(batch))
+	wg := sync.WaitGroup{}
+	mux := sync.Mutex{}
+
+	hashSeed := maphash.MakeSeed()
+	resultIndexMap := map[uint64][]int{}
+	for i, cmd := range batch {
+		hash := cmd.Hash(hashSeed)
+		resultIndexMap[hash] = append(resultIndexMap[hash], i)
+	}
+	isAlreadySend := map[uint64]bool{}
+
 	for _, cmd := range batch {
-		hash := cmd.Hash()
+		hash := cmd.Hash(hashSeed)
 		if !isAlreadySend[hash] {
 			isAlreadySend[hash] = true
+			resultIndexesOuter := resultIndexMap[hash]
 			wg.Add(1)
 			go func(resultIndexes []int, cmd CommandMessage) {
 				defer wg.Done()
@@ -69,7 +71,7 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 					}
 				}
 				return
-			}(resultIndexMap[hash], cmd)
+			}(resultIndexesOuter, cmd)
 		}
 	}
 	wg.Wait()
@@ -85,9 +87,10 @@ func (this *Command) GetEventBatch(token auth.Token, tasks BatchRequest, preferE
 }
 
 func (this *Command) expectedEventRequests(token auth.Token, batch []CommandMessage, preferEventValue bool) (count int64, err error) {
-	isAlreadySend := map[string]bool{}
+	hashSeed := maphash.MakeSeed()
+	isAlreadySend := map[uint64]bool{}
 	for _, cmd := range batch {
-		hash := cmd.Hash()
+		hash := cmd.Hash(hashSeed)
 		if !isAlreadySend[hash] {
 			isAlreadySend[hash] = true
 			if cmd.DeviceId != "" && cmd.ServiceId != "" {

@@ -34,7 +34,6 @@ type Config struct {
 	Debug               bool   `json:"debug"`
 	ResponseWorkerCount int64  `json:"response_worker_count"`
 	MarshallerUrl       string `json:"marshaller_url"`
-	DeviceManagerUrl    string `json:"device_manager_url"`
 	DeviceRepositoryUrl string `json:"device_repository_url"`
 
 	CacheExpiration                 string   `json:"cache_expiration"`
@@ -51,7 +50,6 @@ type Config struct {
 
 	KafkaConsumerGroup string `json:"kafka_consumer_group"`
 	ResponseTopic      string `json:"response_topic"`
-	PermissionsUrl     string `json:"permissions_url"`
 	GroupScheduler     string `json:"group_scheduler"`
 
 	MetadataResponseTo string `json:"metadata_response_to"`

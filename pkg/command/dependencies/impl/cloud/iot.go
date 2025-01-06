@@ -89,7 +89,11 @@ func IotFactory(ctx context.Context, config configuration.Config) (interfaces.Io
 }
 
 func NewIot(config configuration.Config, cache *cache.Cache, cacheDevices bool, cacheExpiration time.Duration) *Iot {
-	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration, client: client.NewClient(config.DeviceRepositoryUrl)}
+	return NewIotWithDeviceRepoClient(config, cache, cacheDevices, cacheExpiration, client.NewClient(config.DeviceRepositoryUrl, nil))
+}
+
+func NewIotWithDeviceRepoClient(config configuration.Config, cache *cache.Cache, cacheDevices bool, cacheExpiration time.Duration, client client.Interface) *Iot {
+	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration, client: client}
 }
 
 func (this *Iot) GetFunction(token string, id string) (result model.Function, err error) {

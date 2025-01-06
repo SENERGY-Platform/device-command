@@ -7,9 +7,9 @@ toolchain go1.23.4
 require (
 	github.com/IBM/sarama v1.43.3
 	github.com/SENERGY-Platform/converter v0.0.10
-	github.com/SENERGY-Platform/device-repository v0.1.51
-	github.com/SENERGY-Platform/external-task-worker v0.0.27
-	github.com/SENERGY-Platform/marshaller v0.0.19
+	github.com/SENERGY-Platform/device-repository v0.1.52
+	github.com/SENERGY-Platform/external-task-worker v0.0.28
+	github.com/SENERGY-Platform/marshaller v0.0.20
 	github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4
 	github.com/SENERGY-Platform/service-commons v0.0.0-20240813072046-91b3195dd8fc
 	github.com/eclipse/paho.mqtt.golang v1.4.3

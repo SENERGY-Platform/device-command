@@ -22,8 +22,8 @@ github.com/SENERGY-Platform/developer-notifications v0.0.4 h1:SmblhfWavNhE1mDxzr
 github.com/SENERGY-Platform/developer-notifications v0.0.4/go.mod h1:8yJrYnAYMtPEPy89ULw8ivgG8orVhSnaLgyfDt0bdgg=
 github.com/SENERGY-Platform/device-repository v0.1.52 h1:JedGhrK3dm0x693jHAPgsn85iO9esjxJz9zgdyt/nis=
 github.com/SENERGY-Platform/device-repository v0.1.52/go.mod h1:36pibGmG2igxgydf+deII/wiP1gWxF2/bgijDzwRriY=
-github.com/SENERGY-Platform/external-task-worker v0.0.29 h1:yVvg6H/HnUnUT2J+rNH+TXKu73RJAhvKtbUvsYltDsQ=
-github.com/SENERGY-Platform/external-task-worker v0.0.29/go.mod h1:kaoUrNfoL2KR0uaMn+UL0f0wl2GIIEBAMAwmM5vjgtI=
+github.com/SENERGY-Platform/external-task-worker v0.0.30 h1:1CfJ6WnuGw3Q/1J3HPK9uWwD0AZujd7GQEmMI35wmWA=
+github.com/SENERGY-Platform/external-task-worker v0.0.30/go.mod h1:kaoUrNfoL2KR0uaMn+UL0f0wl2GIIEBAMAwmM5vjgtI=
 github.com/SENERGY-Platform/marshaller v0.0.20 h1:OseksGNycDcalhODJp4R189Vk5OvxVdm58l6YEC0RGQ=
 github.com/SENERGY-Platform/marshaller v0.0.20/go.mod h1:WYA+xdfYmOkPMeLkgdV3A82wDZtc6Kxy4RSDU+ZdNdE=
 github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4 h1:zS65f1cmjAoBQUA432nmJl2TXAwqqqJMz7sp2DHLAGc=

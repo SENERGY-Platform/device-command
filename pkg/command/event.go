@@ -191,13 +191,15 @@ func getContentPaths(current []string, variable model.ContentVariable) (result [
 	if variable.Name == "" {
 		return result
 	}
-	//skip list
+	//lists as one element
 	if variable.Type == model.List {
-		return result
+		return []string{strings.Join(append(current, variable.Name), ".")}
 	}
+	//leafs
 	if len(variable.SubContentVariables) == 0 {
 		return []string{strings.Join(append(current, variable.Name), ".")}
 	}
+	//structs
 	for _, sub := range variable.SubContentVariables {
 		result = append(result, getContentPaths(append(current, variable.Name), sub)...)
 	}

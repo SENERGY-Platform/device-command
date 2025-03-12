@@ -73,7 +73,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		return
 	}
 
-	config, err = timescaleEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{})
+	config, err = timescaleEnv(config, ctx, wg, map[string]map[string]interface{}{})
 	if err != nil {
 		t.Error(err)
 		return
@@ -1051,18 +1051,20 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			config, err = timescaleCloudEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
 				"color_event": {
 					"urn:infai:ses:service:color_event": {
-						"struct.hue":        176,
-						"struct.saturation": 70,
-						"struct.brightness": 65,
-						"struct.on":         true,
-						"struct.status":     200,
+						"struct": map[string]interface{}{
+							"hue":        176,
+							"saturation": 70,
+							"brightness": 65,
+							"on":         true,
+							"status":     200,
+						},
 					},
 				},
 			})
 		} else {
-			config, err = timescaleEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
+			config, err = timescaleEnv(config, ctx, wg, map[string]map[string]interface{}{
 				"color_event": {
-					"getStatus": {
+					"getStatus": map[string]interface{}{
 						"hue":        176,
 						"saturation": 70,
 						"brightness": 65,

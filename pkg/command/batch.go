@@ -18,10 +18,8 @@ package command
 
 import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	"github.com/SENERGY-Platform/device-command/pkg/command/eventbatch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"hash/maphash"
-	"log"
 	"sync"
 )
 
@@ -29,12 +27,6 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 	if len(batch) == 0 {
 		return []BatchResultElement{}
 	}
-	ebatch, err := this.GetEventBatch(token, batch, preferEventValue)
-	if err != nil {
-		log.Println("WARNING: unable to create event batch --> run without batching", err)
-		ebatch = nil
-	}
-
 	result := make([]BatchResultElement, len(batch))
 	wg := sync.WaitGroup{}
 	mux := sync.Mutex{}
@@ -58,9 +50,9 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 				var code int
 				var temp interface{}
 				if cmd.DeviceId != "" && cmd.ServiceId != "" {
-					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, ebatch, cmd.CharacteristicId)
+					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				} else if cmd.GroupId != "" {
-					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, ebatch, cmd.CharacteristicId)
+					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				}
 				mux.Lock()
 				defer mux.Unlock()
@@ -76,14 +68,6 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 	}
 	wg.Wait()
 	return result
-}
-
-func (this *Command) GetEventBatch(token auth.Token, tasks BatchRequest, preferEventValue bool) (batch *eventbatch.EventBatch, err error) {
-	count, err := this.expectedEventRequests(token, tasks, preferEventValue)
-	if err != nil {
-		return nil, err
-	}
-	return eventbatch.New(token, this.timescale, count), nil
 }
 
 func (this *Command) expectedEventRequests(token auth.Token, batch []CommandMessage, preferEventValue bool) (count int64, err error) {

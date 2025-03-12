@@ -19,7 +19,7 @@ package mgw
 import "testing"
 
 func TestNewTimescale(t *testing.T) {
-	obj, err := NewTimescale("foobar")
+	obj, err := NewTimescale("foobar", "data")
 	if err != nil {
 		t.Error(err)
 		return
@@ -29,7 +29,7 @@ func TestNewTimescale(t *testing.T) {
 		return
 	}
 
-	obj, err = NewTimescale("https://foobar:80")
+	obj, err = NewTimescale("https://foobar:80", "data")
 	if err != nil {
 		t.Error(err)
 		return

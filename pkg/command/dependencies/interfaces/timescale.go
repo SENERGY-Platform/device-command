@@ -18,24 +18,18 @@ package interfaces
 
 import (
 	"context"
+	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/models/go/models"
 	"time"
 )
 
 type Timescale interface {
-	Query(token auth.Token, request []TimescaleRequest, timeout time.Duration) (result []TimescaleResponse, err error)
+	GetLastMessage(token auth.Token, device models.Device, service models.Service, protocol model.Protocol, timeout time.Duration) (result map[string]interface{}, err error)
 }
 type TimescaleFactory func(ctx context.Context, config configuration.Config) (Timescale, error)
 
-type TimescaleRequest struct {
-	Device     model.Device
-	Service    model.Service
-	ColumnName string
-}
-
-type TimescaleResponse struct {
-	Time  *string     `json:"time"`
-	Value interface{} `json:"value"`
-}
+var ErrMissingLastValue = errors.New("missing last value in mgw-last-value")
+var ErrMissingLastValueCode = 513 //custom code to signify missing last-value in mgw-last-value

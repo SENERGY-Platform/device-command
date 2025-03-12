@@ -24,6 +24,8 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/models/go/models"
 	"io"
 	"log"
 	"net/http"
@@ -34,29 +36,64 @@ import (
 
 type Timescale struct {
 	TimescaleWrapperUrl string
+	ProtocolSegmentName string
 }
 
 func TimescaleFactory(ctx context.Context, config configuration.Config) (interfaces.Timescale, error) {
-	return NewTimescale(config.TimescaleWrapperUrl)
+	return NewTimescale(config.TimescaleWrapperUrl, config.MgwProtocolSegment)
 }
 
-func NewTimescale(TimescaleUrl string) (*Timescale, error) {
-	if !strings.Contains(TimescaleUrl, "://") {
-		TimescaleUrl = "http://" + TimescaleUrl
+func NewTimescale(timescaleUrl string, protocolSegmentName string) (*Timescale, error) {
+	if !strings.Contains(timescaleUrl, "://") {
+		timescaleUrl = "http://" + timescaleUrl
 	}
-	parsed, err := url.Parse(TimescaleUrl)
+	parsed, err := url.Parse(timescaleUrl)
 	if err != nil {
 		return nil, err
 	}
 	if parsed.Port() == "" {
-		TimescaleUrl = TimescaleUrl + ":8080"
+		timescaleUrl = timescaleUrl + ":8080"
 	}
-	return &Timescale{TimescaleWrapperUrl: TimescaleUrl}, nil
+	return &Timescale{TimescaleWrapperUrl: timescaleUrl, ProtocolSegmentName: protocolSegmentName}, nil
 }
 
-func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleRequest, timeout time.Duration) (result []interfaces.TimescaleResponse, err error) {
+func (this *Timescale) GetLastMessage(token auth.Token, device models.Device, service models.Service, protocol model.Protocol, timeout time.Duration) (result map[string]interface{}, err error) {
+	list, err := this.Query(token, []Request{{
+		DeviceId:   device.LocalId,
+		ServiceId:  service.LocalId,
+		ColumnName: "",
+	}}, timeout)
+	if err != nil {
+		return result, err
+	}
+	if len(list) != 1 {
+		return result, interfaces.ErrMissingLastValue
+	}
+	element := list[0]
+	if element.Time == nil {
+		return result, interfaces.ErrMissingLastValue
+	}
+	protocolSegmentId := ""
+	for _, segment := range protocol.ProtocolSegments {
+		if segment.Name == this.ProtocolSegmentName {
+			protocolSegmentId = segment.Id
+			break
+		}
+	}
+	contentVariableName := ""
+	for _, output := range service.Outputs {
+		if output.ProtocolSegmentId == protocolSegmentId {
+			contentVariableName = output.ContentVariable.Name
+			break
+		}
+	}
+	result = map[string]interface{}{contentVariableName: element.Value}
+	return result, nil
+}
+
+func (this *Timescale) Query(token auth.Token, request []Request, timeout time.Duration) (result []Response, err error) {
 	body := &bytes.Buffer{}
-	err = json.NewEncoder(body).Encode(this.castRequest(request))
+	err = json.NewEncoder(body).Encode(request)
 	if err != nil {
 		return nil, err
 	}
@@ -82,30 +119,13 @@ func (this *Timescale) Query(token auth.Token, request []interfaces.TimescaleReq
 	return
 }
 
-func (this *Timescale) castRequest(request []interfaces.TimescaleRequest) (result []TimescaleRequest) {
-	for _, r := range request {
-		result = append(result, TimescaleRequest{
-			DeviceId:   r.Device.LocalId,
-			ServiceId:  r.Service.LocalId,
-			ColumnName: this.castPath(r.ColumnName),
-		})
-	}
-	return
-}
-
-func (this *Timescale) castPath(path string) string {
-	if path == "" {
-		return path
-	}
-	parts := strings.Split(path, ".")
-	if len(parts) == 0 {
-		return path
-	}
-	return strings.Join(parts[1:], ".")
-}
-
-type TimescaleRequest struct {
+type Request struct {
 	DeviceId   string
 	ServiceId  string
 	ColumnName string
+}
+
+type Response struct {
+	Time  *string     `json:"time"`
+	Value interface{} `json:"value"`
 }

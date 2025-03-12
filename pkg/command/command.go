@@ -114,10 +114,10 @@ func isMeasuringFunctionId(id string) bool {
 
 func (this *Command) Command(token auth.Token, cmd CommandMessage, timeout string, preferEventValue bool) (code int, resp interface{}) {
 	if cmd.DeviceId != "" && cmd.ServiceId != "" {
-		return this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, nil, cmd.CharacteristicId)
+		return this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 	}
 	if cmd.GroupId != "" {
-		return this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, nil, cmd.CharacteristicId)
+		return this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 	}
 	return http.StatusBadRequest, "missing device_id, service_id or group_id"
 }

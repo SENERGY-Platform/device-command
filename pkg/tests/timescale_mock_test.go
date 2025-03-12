@@ -19,7 +19,6 @@ package tests
 import (
 	"context"
 	"encoding/json"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"log"
 	"net/http"
@@ -34,7 +33,12 @@ type TimescaleMockRequest struct {
 	ColumnName string
 }
 
-func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, values map[string]map[string]map[string]interface{}) (config configuration.Config, err error) {
+type TimescaleMockResponse struct {
+	Time  *string     `json:"time"`
+	Value interface{} `json:"value"`
+}
+
+func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, values map[string]map[string]interface{}) (config configuration.Config, err error) {
 	config = initialConfig
 
 	get := func(req TimescaleMockRequest) (value interface{}) {
@@ -44,7 +48,8 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 				value = nil
 			}
 		}()
-		value = values[req.DeviceId][req.ServiceId][req.ColumnName]
+		log.Printf("timescaleEnv get d=%v s=%v\n", req.DeviceId, req.ServiceId)
+		value = values[req.DeviceId][req.ServiceId]
 		return value
 	}
 
@@ -55,11 +60,15 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		result := []interfaces.TimescaleResponse{}
+		result := []TimescaleMockResponse{}
 
 		now := time.Now().String()
 		for _, req := range msg {
-			result = append(result, interfaces.TimescaleResponse{
+			if req.ColumnName != "" {
+				http.Error(writer, "test expects empty column in mgw last value request", http.StatusBadRequest)
+				return
+			}
+			result = append(result, TimescaleMockResponse{
 				Value: get(req),
 				Time:  &now,
 			})
@@ -81,52 +90,31 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 	return config, nil
 }
 
-type TimescaleMockQuery = []MockQueriesRequestElement
-
-type MockQueriesRequestElement struct {
-	DeviceId  string
-	ServiceId string
-	Limit     int
-	Columns   []MockQueriesRequestElementColumn
+type LastMessageResponse struct {
+	Time  string                 `json:"time"`
+	Value map[string]interface{} `json:"value"`
 }
-
-type MockQueriesRequestElementColumn struct {
-	Name string
-}
-
-type MockTimescaleQueryResponse = [][][]interface{} //[query-index][0][column-index + 1]
 
 func timescaleCloudEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, values map[string]map[string]map[string]interface{}) (config configuration.Config, err error) {
 	config = initialConfig
 
-	get := func(req MockQueriesRequestElement) (value [][]interface{}) {
+	getLastMessage := func(deviceId string, serviceId string) (value LastMessageResponse) {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Println(err)
-				value = nil
+				value = LastMessageResponse{}
 			}
 		}()
-		columnValues := []interface{}{""}
-		for _, c := range req.Columns {
-			columnValues = append(columnValues, values[req.DeviceId][req.ServiceId][c.Name])
+		return LastMessageResponse{
+			Time:  time.Now().UTC().Format(time.RFC3339),
+			Value: values[deviceId][serviceId],
 		}
-		value = [][]interface{}{columnValues}
-		return value
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		msg := TimescaleMockQuery{}
-		err = json.NewDecoder(request.Body).Decode(&msg)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		result := MockTimescaleQueryResponse{}
-
-		for _, req := range msg {
-			result = append(result, get(req))
-		}
-
+		deviceId := request.URL.Query().Get("device_id")
+		serviceId := request.URL.Query().Get("service_id")
+		result := getLastMessage(deviceId, serviceId)
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		json.NewEncoder(writer).Encode(result)
 		return

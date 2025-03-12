@@ -66,9 +66,9 @@ func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *
 			return
 		}
 
-		config, err = timescaleEnv(config, ctx, wg, map[string]map[string]map[string]interface{}{
+		config, err = timescaleEnv(config, ctx, wg, map[string]map[string]interface{}{
 			"color_event_lid": {
-				"getStatus": {
+				"getStatus": map[string]interface{}{
 					"hue":        176,
 					"saturation": 70,
 					"brightness": 65,
@@ -77,9 +77,7 @@ func testMgwCommand(fallbackPath string, useAuthOverwriteFallback bool) func(t *
 				},
 			},
 			"status_event_lid": {
-				"getStatus": {
-					"": "on",
-				},
+				"getStatus": "on",
 			},
 		})
 		if err != nil {

@@ -94,6 +94,8 @@ type Config struct {
 	AuthUserName             string  `json:"auth_user_name" config:"secret"`
 	AuthPassword             string  `json:"auth_password" config:"secret"`
 	AuthFallbackToken        string  `json:"auth_fallback_token"`
+
+	InitTopics bool `json:"init_topics"`
 }
 
 // loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)

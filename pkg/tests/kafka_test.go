@@ -21,10 +21,12 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/test/docker"
 	"sync"
+	"time"
 )
 
 func kafkaEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup) (config configuration.Config, err error) {
 	config = initialConfig
+	config.InitTopics = true
 
 	_, zkIp, err := docker.Zookeeper(ctx, wg)
 	if err != nil {
@@ -40,6 +42,8 @@ func kafkaEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.
 	}
 
 	config.KafkaUrl = kafkaUrl
+
+	time.Sleep(5 * time.Second)
 
 	return config, nil
 }

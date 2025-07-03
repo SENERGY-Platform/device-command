@@ -27,10 +27,12 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/device-repository/lib/client"
 	devicerepomodel "github.com/SENERGY-Platform/device-repository/lib/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
+	"github.com/SENERGY-Platform/models/go/models"
 	"io"
 	"log"
 	"net"
@@ -758,7 +760,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		return
 	}
 
-	config, db, err := iotEnv(config, ctx, wg, export1)
+	config, c, db, err := iotEnv(config, ctx, wg, export1)
 	if err != nil {
 		t.Error(err)
 		return
@@ -773,7 +775,8 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		},
 	}
 	for _, p := range protocols {
-		err = db.SetProtocol(ctx, p)
+		err = db.SetProtocol(ctx, p, NilCallback)
+
 		if err != nil {
 			t.Error(err)
 			return
@@ -788,7 +791,8 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		},
 	}
 	for _, dc := range deviceClasses {
-		err = db.SetDeviceClass(ctx, dc)
+		err = db.SetDeviceClass(ctx, dc, NilCallback)
+
 		if err != nil {
 			t.Error(err)
 			return
@@ -807,8 +811,9 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 			SubCharacteristics: nil,
 		},
 	}
-	for _, c := range characteristics {
-		err = db.SetCharacteristic(ctx, c)
+	for _, characteristic := range characteristics {
+		err = db.SetCharacteristic(ctx, characteristic, NilCallback)
+
 		if err != nil {
 			t.Error(err)
 			return
@@ -823,8 +828,9 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 			BaseCharacteristicId: "urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683",
 		},
 	}
-	for _, c := range concepts {
-		err = db.SetConcept(ctx, c)
+	for _, concept := range concepts {
+		err = db.SetConcept(ctx, concept, NilCallback)
+
 		if err != nil {
 			t.Error(err)
 			return
@@ -843,7 +849,8 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 	}
 
 	for _, f := range functions {
-		err = db.SetFunction(ctx, f)
+		err = db.SetFunction(ctx, f, NilCallback)
+
 		if err != nil {
 			t.Error(err)
 			return
@@ -852,7 +859,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 
 	deviceTypes := []model.DeviceType{dt}
 	for _, dt := range deviceTypes {
-		err = db.SetDeviceType(ctx, dt)
+		err = db.SetDeviceType(ctx, dt, NilCallback)
 		if err != nil {
 			t.Error(err)
 			return
@@ -877,13 +884,14 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 	for _, device := range devices {
 		err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
 			Device: device,
-		})
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
-			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+		}, func(old devicerepomodel.DeviceWithConnectionState, new devicerepomodel.DeviceWithConnectionState) error {
+			_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "devices", new.Id, client.ResourcePermissions{
+				UserPermissions: map[string]client.PermissionsMap{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+			})
+			if err != nil {
+				t.Error(err)
+			}
+			return err
 		})
 		if err != nil {
 			t.Error(err)
@@ -916,14 +924,15 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		},
 	}
 	for _, dg := range deviceGroups {
-		err = db.SetDeviceGroup(ctx, dg)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		err = db.SetRights("device-groups", dg.Id, devicerepomodel.ResourceRights{
-			UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
-		})
+		err = db.SetDeviceGroup(ctx, dg, func(dg models.DeviceGroup, user string) error {
+			_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "device-groups", dg.Id, client.ResourcePermissions{
+				UserPermissions: map[string]client.PermissionsMap{user: {Read: true, Write: true, Execute: true, Administrate: true}},
+			})
+			if err != nil {
+				t.Error(err)
+			}
+			return err
+		}, "testOwner")
 		if err != nil {
 			t.Error(err)
 			return
@@ -1040,6 +1049,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 		}
 		config.TopicSuffixForScaling = scalingSuffix
 		config.Debug = true
+		config.InitTopics = true
 
 		config.ServerPort, err = GetFreePort()
 		if err != nil {
@@ -1080,7 +1090,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			return
 		}
 
-		config, db, err := iotEnv(config, ctx, wg, export1)
+		config, c, db, err := iotEnv(config, ctx, wg, export1)
 		if err != nil {
 			t.Error(err)
 			return
@@ -1134,13 +1144,14 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 		for _, device := range devices {
 			err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
 				Device: device,
-			})
-			if err != nil {
-				t.Error(err)
-				return
-			}
-			err = db.SetRights("devices", device.Id, devicerepomodel.ResourceRights{
-				UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+			}, func(old devicerepomodel.DeviceWithConnectionState, new devicerepomodel.DeviceWithConnectionState) error {
+				_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "devices", new.Id, client.ResourcePermissions{
+					UserPermissions: map[string]client.PermissionsMap{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
+				})
+				if err != nil {
+					t.Error(err)
+				}
+				return err
 			})
 			if err != nil {
 				t.Error(err)
@@ -1159,14 +1170,19 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			},
 		}
 		for _, dg := range deviceGroups {
-			err = db.SetDeviceGroup(ctx, dg)
+			err = db.SetDeviceGroup(ctx, dg, func(dg models.DeviceGroup, user string) error {
+				_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "device-groups", dg.Id, client.ResourcePermissions{
+					UserPermissions: map[string]client.PermissionsMap{user: {Read: true, Write: true, Execute: true, Administrate: true}},
+				})
+				if err != nil {
+					t.Error(err)
+				}
+				return err
+			}, "testOwner")
 			if err != nil {
 				t.Error(err)
 				return
 			}
-			err = db.SetRights("device-groups", dg.Id, devicerepomodel.ResourceRights{
-				UserRights: map[string]devicerepomodel.Right{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
-			})
 			if err != nil {
 				t.Error(err)
 				return

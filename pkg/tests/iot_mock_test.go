@@ -23,16 +23,17 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-repository/lib/api"
 	"github.com/SENERGY-Platform/device-repository/lib/client"
-	repoconf "github.com/SENERGY-Platform/device-repository/lib/config"
+	repoconf "github.com/SENERGY-Platform/device-repository/lib/configuration"
 	"github.com/SENERGY-Platform/device-repository/lib/database"
 	"github.com/SENERGY-Platform/models/go/models"
 	"log"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"time"
 )
 
-func iotEnvSetExport[T any, F func(ctx context.Context, e T) error](ctx context.Context, key string, value interface{}, prefix string, setter F) error {
+func iotEnvSetExport[T any, F func(ctx context.Context, e T, sf func(T) error) error](ctx context.Context, key string, value interface{}, prefix string, setter F, permCb func(T) error) error {
 	if strings.HasPrefix(key, prefix) {
 		e := new(T)
 		temp, err := json.Marshal(value)
@@ -45,7 +46,7 @@ func iotEnvSetExport[T any, F func(ctx context.Context, e T) error](ctx context.
 			log.Println("ERROR: unable to unmarshal", prefix, err)
 			return err
 		}
-		err = setter(ctx, *e)
+		err = setter(ctx, *e, permCb)
 		if err != nil {
 			log.Println("ERROR: unable to set", prefix, err)
 			return err
@@ -77,55 +78,60 @@ func CreateAspectNodes(db database.Database, aspect models.Aspect, rootId string
 	return append(descendents, aspect.Id), err
 }
 
-func iotEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, export []byte) (config configuration.Config, db database.Database, err error) {
+func NilCallback[T any](T) error {
+	return nil
+}
+
+func iotEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, export []byte) (config configuration.Config, c client.Interface, db database.Database, err error) {
 	config = initialConfig
 
-	c, db, err := client.NewTestClient()
+	c, db, err = client.NewTestClient()
 	if err != nil {
-		return config, db, err
+		return config, c, db, err
 	}
+	time.Sleep(time.Second)
 
 	exportStruct := map[string]interface{}{}
 	err = json.Unmarshal(export, &exportStruct)
 	if err != nil {
-		return config, db, err
+		return config, c, db, err
 	}
 
 	for k, v := range exportStruct {
-		err = iotEnvSetExport(ctx, k, v, "/characteristics/", db.SetCharacteristic)
+		err = iotEnvSetExport(ctx, k, v, "/characteristics/", db.SetCharacteristic, NilCallback)
 		if err != nil {
-			return config, db, err
+			return config, c, db, err
 		}
-		err = iotEnvSetExport(ctx, k, v, "/concepts/", db.SetConcept)
+		err = iotEnvSetExport(ctx, k, v, "/concepts/", db.SetConcept, NilCallback)
 		if err != nil {
-			return config, db, err
+			return config, c, db, err
 		}
-		err = iotEnvSetExport(ctx, k, v, "/aspects/", func(ctx context.Context, aspect models.Aspect) error {
-			err := db.SetAspect(ctx, aspect)
+		err = iotEnvSetExport(ctx, k, v, "/aspects/", func(ctx context.Context, aspect models.Aspect, sf func(a2 models.Aspect) error) error {
+			err := db.SetAspect(ctx, aspect, sf)
 			if err != nil {
 				return err
 			}
 			_, err = CreateAspectNodes(db, aspect, aspect.Id, "", []string{})
 			return err
-		})
+		}, NilCallback)
 		if err != nil {
-			return config, db, err
+			return config, c, db, err
 		}
-		err = iotEnvSetExport(ctx, k, v, "/functions/", db.SetFunction)
+		err = iotEnvSetExport(ctx, k, v, "/functions/", db.SetFunction, NilCallback)
 		if err != nil {
-			return config, db, err
+			return config, c, db, err
 		}
-		err = iotEnvSetExport(ctx, k, v, "/device-classes/", db.SetDeviceClass)
+		err = iotEnvSetExport(ctx, k, v, "/device-classes/", db.SetDeviceClass, NilCallback)
 		if err != nil {
-			return config, db, err
+			return config, c, db, err
 		}
-		err = iotEnvSetExport(ctx, k, v, "/protocols/", db.SetProtocol)
+		err = iotEnvSetExport(ctx, k, v, "/protocols/", db.SetProtocol, NilCallback)
 		if err != nil {
-			return config, db, err
+			return config, c, db, err
 		}
-		err = iotEnvSetExport(ctx, k, v, "/device-types/", db.SetDeviceType)
+		err = iotEnvSetExport(ctx, k, v, "/device-types/", db.SetDeviceType, NilCallback)
 		if err != nil {
-			return config, db, err
+			return config, c, db, err
 		}
 
 	}
@@ -138,7 +144,7 @@ func iotEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.Wa
 		wg.Done()
 	}()
 	config.DeviceRepositoryUrl = server.URL
-	return config, db, nil
+	return config, c, db, err
 }
 
 //go:embed test_export_1.json

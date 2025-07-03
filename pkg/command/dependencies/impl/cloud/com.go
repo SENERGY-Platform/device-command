@@ -110,6 +110,7 @@ func createLibConfig(config configuration.Config) util.Config {
 		DeviceRepoUrl:                   config.DeviceRepositoryUrl,
 		CompletionStrategy:              util.PESSIMISTIC,
 		OptimisticTaskCompletionTimeout: 100,
+		InitTopics:                      config.InitTopics,
 		KafkaUrl:                        config.KafkaUrl,
 		KafkaConsumerGroup:              config.KafkaConsumerGroup,
 		ResponseTopic:                   config.ResponseTopic,

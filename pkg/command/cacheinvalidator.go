@@ -39,6 +39,7 @@ func StartKafkaCacheInvalidator(ctx context.Context, config configuration.Config
 			log.Println("ERROR:", err)
 			debug.PrintStack()
 		},
+		InitTopic: config.InitTopics,
 	}
 	if len(config.CacheInvalidationAllKafkaTopics) > 0 {
 		err = invalidator.StartCacheInvalidatorAll(ctx, kafkaConf, config.CacheInvalidationAllKafkaTopics, nil)

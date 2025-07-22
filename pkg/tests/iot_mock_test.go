@@ -20,6 +20,8 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-repository/lib/api"
 	"github.com/SENERGY-Platform/device-repository/lib/client"
@@ -27,6 +29,7 @@ import (
 	"github.com/SENERGY-Platform/device-repository/lib/database"
 	"github.com/SENERGY-Platform/models/go/models"
 	"log"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
@@ -82,8 +85,30 @@ func NilCallback[T any](T) error {
 	return nil
 }
 
+func authMock(config configuration.Config, ctx context.Context, wg *sync.WaitGroup) (configuration.Config, error) {
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwOGM0N2E4OC0yYzc5LTQyMGYtODEwNC02NWJkOWViYmU0MWUiLCJleHAiOjE1NDY1MDcyMzMsIm5iZiI6MCwiaWF0IjoxNTQ2NTA3MTczLCJpc3MiOiIiLCJzdWIiOiJmYWxsYmFjay10b2tlbiIsInR5cCI6IkJlYXJlciIsImF6cCI6Im1ndy1kZXZpY2UtY29tbWFuZCIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJ1c2VyIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibWFzdGVyLXJlYWxtIjp7InJvbGVzIjpbXX0sImFjY291bnQiOnsicm9sZXMiOltdfX0sInJvbGVzIjpbInVzZXIiXX0.4d1G3G7o0KtszEJmu-UVO5diw2PqRG0yvbicsaD2SDc"
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Println("auth mock:", json.NewEncoder(writer).Encode(auth.OpenidToken{
+			AccessToken: token,
+		}))
+	}))
+	wg.Add(1)
+	go func() {
+		<-ctx.Done()
+		server.Close()
+		wg.Done()
+	}()
+	config.AuthEndpoint = server.URL
+	return config, nil
+}
+
 func iotEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup, export []byte) (config configuration.Config, c client.Interface, db database.Database, err error) {
 	config = initialConfig
+
+	config, err = authMock(config, ctx, wg)
+	if err != nil {
+		return config, c, db, err
+	}
 
 	c, db, err = client.NewTestClient()
 	if err != nil {

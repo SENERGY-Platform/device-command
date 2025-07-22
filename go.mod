@@ -31,6 +31,7 @@ require (
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
 	github.com/SENERGY-Platform/developer-notifications v0.0.4 // indirect
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1 // indirect
+	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1 // indirect
 	github.com/SENERGY-Platform/permissions-v2 v0.0.38 // indirect
 	github.com/SENERGY-Platform/process-incident-api v0.0.8 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

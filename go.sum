@@ -28,6 +28,8 @@ github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1 h1:FF4jhIpxYbXk
 github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1/go.mod h1:WuvuHGXhnLtXn2ry2kfTaQwco3EY3XTCefLeNqUT+jg=
 github.com/SENERGY-Platform/marshaller v0.0.21 h1:z9UzK+xwwT702GpQkU6DexfdDuLQKHRyCgrHdHi1sGY=
 github.com/SENERGY-Platform/marshaller v0.0.21/go.mod h1:auKsaDuwjECkhhPWvIP7aS1NHxHhnKbZJ1opYNQTEXc=
+github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1 h1:cTUZ4sJLmLxXQUfP3hw50YVUJRd2OFpxyLIreIUEzpw=
+github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1/go.mod h1:UPtGbiAOtGd78qgM0HZrtiKxcn3HebSV5QAZvHme998=
 github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4 h1:zS65f1cmjAoBQUA432nmJl2TXAwqqqJMz7sp2DHLAGc=
 github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
 github.com/SENERGY-Platform/permissions-v2 v0.0.38 h1:zrzIzQ2TB4LENaVZFLK+dpO4KBFlOmvCDcwRzzOoRAE=

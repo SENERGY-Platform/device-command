@@ -16,7 +16,9 @@
 
 package mgw
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestNewTimescale(t *testing.T) {
 	obj, err := NewTimescale("foobar", "data")

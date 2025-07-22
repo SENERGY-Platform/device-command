@@ -25,7 +25,6 @@ import (
 	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/fallback"
-	"log"
 	"time"
 )
 
@@ -47,13 +46,7 @@ func IotFactory(ctx context.Context, config configuration.Config) (result interf
 	}
 	a := &auth.OpenidToken{}
 	deviceRepoClient := client.NewClient(config.DeviceRepositoryUrl, func() (token string, err error) {
-		token, err = a.EnsureAccess(config)
-		if err != nil && config.AuthFallbackToken != "" {
-			log.Println("WARNING: unable to get token, use AuthFallbackToken", err)
-			token = "Bearer " + config.AuthFallbackToken
-			err = nil
-		}
-		return token, err
+		return a.EnsureAccess(config)
 	})
 	return cloud.NewIotWithDeviceRepoClient(config, c, true, cacheExpiration, deviceRepoClient), nil
 }

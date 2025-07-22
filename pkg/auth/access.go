@@ -20,13 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"io"
 	"log"
 	"net/http"
 	"time"
 
 	"net/url"
-
-	"io/ioutil"
 )
 
 type OpenidToken struct {
@@ -39,6 +38,10 @@ type OpenidToken struct {
 }
 
 func (openid *OpenidToken) EnsureAccess(config configuration.Config) (token string, err error) {
+	if !config.AuthEnabled() {
+		return "", nil
+	}
+
 	duration := time.Now().Sub(openid.RequestTime).Seconds()
 
 	if openid.AccessToken != "" && openid.ExpiresIn-config.AuthExpirationTimeBuffer > duration {
@@ -81,7 +84,7 @@ func getOpenidToken(token *OpenidToken, config configuration.Config) (err error)
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		err = errors.New(string(body))
 		resp.Body.Close()
 		return
@@ -103,7 +106,7 @@ func refreshOpenidToken(token *OpenidToken, config configuration.Config) (err er
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		err = errors.New(string(body))
 		resp.Body.Close()
 		return

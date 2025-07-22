@@ -23,7 +23,6 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
-	"log"
 	"net/http"
 )
 
@@ -40,8 +39,7 @@ type MarshallerIot struct {
 func (this *MarshallerIot) GetAspectNode(id string) (result model.AspectNode, err error) {
 	token, err := this.auth.EnsureAccess(this.config)
 	if err != nil {
-		log.Println("WARNING: unable to get new auth token for GetAspectNode(), use fallback token", err)
-		token = "Bearer " + this.config.AuthFallbackToken
+		return result, err
 	}
 	temp, err := this.iot.GetAspectNode(token, id)
 	if err != nil {
@@ -51,7 +49,7 @@ func (this *MarshallerIot) GetAspectNode(id string) (result model.AspectNode, er
 	return result, err
 }
 
-//this method should only be needed for old marshal/unmarshal requests
+// this method should only be needed for old marshal/unmarshal requests
 func (this MarshallerIot) GetDeviceType(id string) (result model.DeviceType, err error, code int) {
 	return result, errors.New("not implemented"), http.StatusInternalServerError
 }

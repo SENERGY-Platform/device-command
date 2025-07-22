@@ -87,13 +87,13 @@ type Config struct {
 
 	MgwConceptRepoRefreshInterval int64 `json:"mgw_concept_repo_refresh_interval"` //in seconds
 
-	OverwriteAuthToken       bool    `json:"overwrite_auth_token"`
+	RequestUserIdp string `json:"request_user_idp"` //"jwt" -> user is identified by request jwt || "mgw:<url>" -> user is identified by local mgw service
+
 	AuthExpirationTimeBuffer float64 `json:"auth_expiration_time_buffer"`
 	AuthEndpoint             string  `json:"auth_endpoint"`
 	AuthClientId             string  `json:"auth_client_id" config:"secret"`
 	AuthUserName             string  `json:"auth_user_name" config:"secret"`
 	AuthPassword             string  `json:"auth_password" config:"secret"`
-	AuthFallbackToken        string  `json:"auth_fallback_token"`
 
 	InitTopics bool `json:"init_topics"`
 }
@@ -114,6 +114,10 @@ func Load(location string) (config Config, err error) {
 	handleEnvironmentVars(&config)
 	config.DefaultTimeoutDuration, err = time.ParseDuration(config.DefaultTimeout)
 	return config, err
+}
+
+func (this Config) AuthEnabled() bool {
+	return this.AuthEndpoint != "" && this.AuthEndpoint != "-"
 }
 
 var camel = regexp.MustCompile("(^[^A-Z]*|[A-Z]*)([A-Z][^A-Z]+|$)")

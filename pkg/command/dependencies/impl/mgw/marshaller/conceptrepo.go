@@ -184,8 +184,7 @@ func (this *ConceptRepo) registerFunction(f FunctionInfo) {
 func (this *ConceptRepo) Load() error {
 	token, err := this.auth.EnsureAccess(this.config)
 	if err != nil {
-		log.Println("WARNING: unable to get new auth token for concept repo Load(), use fallback token", err)
-		token = "Bearer " + this.config.AuthFallbackToken
+		return err
 	}
 	conceptIds, err := this.loadConceptIds(token)
 	if err != nil {

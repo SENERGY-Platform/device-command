@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/device-command/pkg/api/util"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
@@ -26,12 +27,12 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/service-commons/pkg/accesslog"
 	"github.com/julienschmidt/httprouter"
-	"github.com/pkg/errors"
 	"log"
 	"net/http"
 	"reflect"
 	"runtime"
 	"runtime/debug"
+	"strings"
 )
 
 type Command interface {
@@ -48,12 +49,14 @@ func Start(ctx context.Context, config configuration.Config, command Command) (e
 			err = errors.New(fmt.Sprint(r))
 		}
 	}()
-	router := GetRouter(config, command)
-
+	router, err := GetRouter(config, command)
+	if err != nil {
+		return err
+	}
 	server := &http.Server{Addr: ":" + config.ServerPort, Handler: router}
 	go func() {
 		log.Println("listening on ", server.Addr)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			debug.PrintStack()
 			log.Fatal("FATAL:", err)
 		}
@@ -65,19 +68,25 @@ func Start(ctx context.Context, config configuration.Config, command Command) (e
 	return
 }
 
-func GetRouter(config configuration.Config, command Command) http.Handler {
+func GetRouter(config configuration.Config, command Command) (handler http.Handler, err error) {
 	router := httprouter.New()
 	router.Handler(http.MethodGet, "/metrics", command.GetMetricsHttpHandler())
 	for _, e := range endpoints {
 		log.Println("add endpoint: " + runtime.FuncForPC(reflect.ValueOf(e).Pointer()).Name())
 		e(config, router, command)
 	}
-	var handler http.Handler = router
-	if config.OverwriteAuthToken {
-		handler = util.NewTokenOverwrite(config, handler)
+	handler = router
+	switch {
+	case config.RequestUserIdp == "jwt":
+		break
+	case strings.HasPrefix(config.RequestUserIdp, "mgw:"):
+		handler, err = util.NewMgwRequestUserIdp(config, handler)
+		break
+	default:
+		return handler, errors.New("unknown request_user_idp configured")
 	}
 	handler = util.NewVersionHeaderMiddleware(handler)
 	handler = util.NewCors(handler)
 	handler = accesslog.New(handler)
-	return handler
+	return handler, nil
 }

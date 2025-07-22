@@ -235,11 +235,13 @@ func (this *Iot) GetJson(token string, endpoint string, result interface{}) (err
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", token)
-	client := &http.Client{
+	if this.config.AuthEnabled() {
+		req.Header.Set("Authorization", token)
+	}
+	c := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	resp, err := client.Do(req)
+	resp, err := c.Do(req)
 	if err != nil {
 		return err
 	}

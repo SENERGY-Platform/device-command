@@ -20,6 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+	"reflect"
+	"runtime"
+	"runtime/debug"
+	"strings"
+
 	"github.com/SENERGY-Platform/device-command/pkg/api/util"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
@@ -27,12 +34,6 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/service-commons/pkg/accesslog"
 	"github.com/julienschmidt/httprouter"
-	"log"
-	"net/http"
-	"reflect"
-	"runtime"
-	"runtime/debug"
-	"strings"
 )
 
 type Command interface {
@@ -78,6 +79,9 @@ func GetRouter(config configuration.Config, command Command) (handler http.Handl
 	handler = router
 	switch {
 	case config.RequestUserIdp == "jwt":
+		break
+	case strings.HasPrefix(config.RequestUserIdp, "user:"):
+		handler, err = util.NewPresetUserIdp(config, handler)
 		break
 	case strings.HasPrefix(config.RequestUserIdp, "mgw:"):
 		handler, err = util.NewMgwRequestUserIdp(config, handler)

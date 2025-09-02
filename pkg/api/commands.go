@@ -18,12 +18,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
+
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/julienschmidt/httprouter"
-	"net/http"
-	"strconv"
 )
 
 func init() {
@@ -34,6 +36,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 	router.POST("/commands", func(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 		token, err := auth.GetParsedToken(request)
 		if err != nil {
+			config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", err.Error())
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -45,6 +48,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 		if preferEventValueStr != "" {
 			preferEventValue, err = strconv.ParseBool(preferEventValueStr)
 			if err != nil {
+				config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", err.Error())
 				http.Error(writer, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -53,16 +57,21 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 		msg := command.CommandMessage{}
 		err = json.NewDecoder(request.Body).Decode(&msg)
 		if err != nil {
+			config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", err.Error())
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		if msg.FunctionId == "" {
+			config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", "expect function_id in body")
 			http.Error(writer, "expect function_id in body", http.StatusBadRequest)
 			return
 		}
 
 		code, result := cmd.Command(token, msg, timeout, preferEventValue)
+		if code != http.StatusOK {
+			config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", code, "response-body", fmt.Sprintf("%#v", result))
+		}
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		writer.WriteHeader(code)
 		json.NewEncoder(writer).Encode(result)
@@ -71,6 +80,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 	router.POST("/commands/batch", func(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 		token, err := auth.GetParsedToken(request)
 		if err != nil {
+			config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", err.Error())
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -82,6 +92,7 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 		if preferEventValueStr != "" {
 			preferEventValue, err = strconv.ParseBool(preferEventValueStr)
 			if err != nil {
+				config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", err.Error())
 				http.Error(writer, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -90,12 +101,14 @@ func CommandEndpoints(config configuration.Config, router *httprouter.Router, cm
 		batch := command.BatchRequest{}
 		err = json.NewDecoder(request.Body).Decode(&batch)
 		if err != nil {
+			config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", err.Error())
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		err = batch.Validate()
 		if err != nil {
+			config.GetLogger().Warn("error response", "request-url", request.URL.String(), "user", token.GetUserId(), "response-status-code", http.StatusBadRequest, "response-body", err.Error())
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}

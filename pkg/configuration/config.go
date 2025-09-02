@@ -20,13 +20,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"reflect"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
 
+	struct_logger "github.com/SENERGY-Platform/go-service-base/struct-logger"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -98,6 +101,9 @@ type Config struct {
 	AuthPassword             string  `json:"auth_password" config:"secret"`
 
 	InitTopics bool `json:"init_topics"`
+
+	LogLevel string       `json:"log_level"`
+	logger   *slog.Logger `json:"-"`
 }
 
 // loads config from json in location and used environment variables (e.g ZookeeperUrl --> ZOOKEEPER_URL)
@@ -186,4 +192,31 @@ func handleEnvironmentVars(config *Config) {
 			}
 		}
 	}
+}
+
+func (this *Config) GetLogger() *slog.Logger {
+	if this.logger == nil {
+		info, ok := debug.ReadBuildInfo()
+		project := ""
+		org := ""
+		if ok {
+			if parts := strings.Split(info.Main.Path, "/"); len(parts) > 2 {
+				project = strings.Join(parts[2:], "/")
+				org = strings.Join(parts[:2], "/")
+			}
+		}
+		this.logger = struct_logger.New(
+			struct_logger.Config{
+				Handler:    struct_logger.JsonHandlerSelector,
+				Level:      this.LogLevel,
+				TimeFormat: time.RFC3339Nano,
+				TimeUtc:    true,
+				AddMeta:    true,
+			},
+			os.Stdout,
+			org,
+			project,
+		).With("project-group", "smart-service")
+	}
+	return this.logger
 }

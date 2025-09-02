@@ -1,5 +1,6 @@
 {
     "debug":true,
+    "log_level": "info",
     "server_port":"8080",
 
     "async_cache_refresh": false,

@@ -17,7 +17,9 @@
 package command
 
 import (
+	"fmt"
 	"hash/maphash"
+	"net/http"
 	"sync"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
@@ -54,6 +56,9 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				} else if cmd.GroupId != "" {
 					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
+				}
+				if code != http.StatusOK {
+					this.config.GetLogger().Warn("error batch response element", "user", token.GetUserId(), "code", code, "response", fmt.Sprintf("%#v", result))
 				}
 				mux.Lock()
 				defer mux.Unlock()

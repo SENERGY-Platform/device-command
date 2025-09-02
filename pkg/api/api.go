@@ -80,6 +80,9 @@ func GetRouter(config configuration.Config, command Command) (handler http.Handl
 	switch {
 	case config.RequestUserIdp == "jwt":
 		break
+	case config.RequestUserIdp == "auth":
+		handler, err = util.NewAuthIdp(config, handler)
+		break
 	case strings.HasPrefix(config.RequestUserIdp, "user:"):
 		handler, err = util.NewPresetUserIdp(config, handler)
 		break

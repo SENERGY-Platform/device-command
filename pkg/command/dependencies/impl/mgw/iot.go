@@ -18,6 +18,8 @@ package mgw
 
 import (
 	"context"
+	"time"
+
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
@@ -25,7 +27,6 @@ import (
 	"github.com/SENERGY-Platform/device-repository/lib/client"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/fallback"
-	"time"
 )
 
 func IotFactory(ctx context.Context, config configuration.Config) (result interfaces.Iot, err error) {
@@ -48,5 +49,6 @@ func IotFactory(ctx context.Context, config configuration.Config) (result interf
 	deviceRepoClient := client.NewClient(config.DeviceRepositoryUrl, func() (token string, err error) {
 		return a.EnsureAccess(config)
 	})
-	return cloud.NewIotWithDeviceRepoClient(config, c, true, cacheExpiration, deviceRepoClient), nil
+	overwriteAuthTokens := config.RequestUserIdp != "jwt"
+	return cloud.NewIotWithDeviceRepoClient(config, c, true, cacheExpiration, deviceRepoClient, overwriteAuthTokens), nil
 }

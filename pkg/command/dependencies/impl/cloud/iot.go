@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-repository/lib/client"
@@ -37,12 +38,14 @@ import (
 )
 
 type Iot struct {
-	cache           *cache.Cache
-	config          configuration.Config
-	cacheDevices    bool //no caching to ensure access check in repository
-	lastUsedToken   string
-	cacheExpiration time.Duration
-	client          client.Interface
+	cache               *cache.Cache
+	config              configuration.Config
+	cacheDevices        bool //no caching to ensure access check in repository
+	lastUsedToken       string
+	cacheExpiration     time.Duration
+	client              client.Interface
+	overwriteAuthTokens bool
+	auth                *auth.OpenidToken
 }
 
 func GetCacheConfig() cache.Config {
@@ -90,11 +93,11 @@ func IotFactory(ctx context.Context, config configuration.Config) (interfaces.Io
 }
 
 func NewIot(config configuration.Config, cache *cache.Cache, cacheDevices bool, cacheExpiration time.Duration) *Iot {
-	return NewIotWithDeviceRepoClient(config, cache, cacheDevices, cacheExpiration, client.NewClient(config.DeviceRepositoryUrl, nil))
+	return NewIotWithDeviceRepoClient(config, cache, cacheDevices, cacheExpiration, client.NewClient(config.DeviceRepositoryUrl, nil), false)
 }
 
-func NewIotWithDeviceRepoClient(config configuration.Config, cache *cache.Cache, cacheDevices bool, cacheExpiration time.Duration, client client.Interface) *Iot {
-	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration, client: client}
+func NewIotWithDeviceRepoClient(config configuration.Config, cache *cache.Cache, cacheDevices bool, cacheExpiration time.Duration, client client.Interface, overwriteAuthTokens bool) *Iot {
+	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration, client: client, overwriteAuthTokens: overwriteAuthTokens, auth: &auth.OpenidToken{}}
 }
 
 func (this *Iot) GetFunction(id string) (result model.Function, err error) {
@@ -144,6 +147,12 @@ func (this *Iot) GetDevice(token string, id string) (result model.Device, err er
 			use = cache.UseWithAsyncRefresh[model.Device]
 		}
 		return use(this.cache, "device."+id, func() (model.Device, error) {
+			if this.overwriteAuthTokens {
+				token, err = this.auth.EnsureAccess(this.config)
+				if err != nil {
+					return model.Device{}, err
+				}
+			}
 			return this.getDevice(token, id)
 		}, func(device model.Device) error {
 			if device.Id == "" {
@@ -166,6 +175,12 @@ func (this *Iot) GetProtocol(token string, id string) (result model.Protocol, er
 		use = cache.UseWithAsyncRefresh[model.Protocol]
 	}
 	return use(this.cache, "protocol."+id, func() (model.Protocol, error) {
+		if this.overwriteAuthTokens {
+			token, err = this.auth.EnsureAccess(this.config)
+			if err != nil {
+				return model.Protocol{}, err
+			}
+		}
 		return this.getProtocol(token, id)
 	}, func(protocol model.Protocol) error {
 		if protocol.Id == "" {
@@ -220,6 +235,12 @@ func (this *Iot) GetDeviceType(token string, id string) (result model.DeviceType
 		use = cache.UseWithAsyncRefresh[model.DeviceType]
 	}
 	return use(this.cache, "device-type."+id, func() (model.DeviceType, error) {
+		if this.overwriteAuthTokens {
+			token, err = this.auth.EnsureAccess(this.config)
+			if err != nil {
+				return model.DeviceType{}, err
+			}
+		}
 		return this.getDeviceType(token, id)
 	}, func(deviceType model.DeviceType) error {
 		if deviceType.Id == "" {
@@ -240,6 +261,12 @@ func (this *Iot) GetDeviceGroup(token string, id string) (result model.DeviceGro
 		use = cache.UseWithAsyncRefresh[model.DeviceGroup]
 	}
 	return use(this.cache, "device-group."+id, func() (model.DeviceGroup, error) {
+		if this.overwriteAuthTokens {
+			token, err = this.auth.EnsureAccess(this.config)
+			if err != nil {
+				return model.DeviceGroup{}, err
+			}
+		}
 		return this.getDeviceGroup(token, id)
 	}, func(group model.DeviceGroup) error {
 		if group.Id == "" {

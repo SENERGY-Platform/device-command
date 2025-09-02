@@ -45,16 +45,20 @@ type PresetUserIdp struct {
 
 func (this *PresetUserIdp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if this.handler == nil {
-		http.Error(w, "Missing Handler in MgwRequestUserIdpMiddleWare", 500)
+		http.Error(w, "Missing Handler in PresetUserIdp", 500)
+	}
+	if r.Header.Get("Authorization") != "" {
+		this.handler.ServeHTTP(w, r)
+		return
 	}
 	userId, err := this.GetUserId()
 	if err != nil {
-		http.Error(w, "unable to use MgwRequestUserIdpMiddleWare: "+err.Error(), 500)
+		http.Error(w, "unable to use PresetUserIdp: "+err.Error(), 500)
 		return
 	}
 	token, err := this.GenerateUserTokenById(userId)
 	if err != nil {
-		http.Error(w, "unable to use MgwRequestUserIdpMiddleWare: "+err.Error(), 500)
+		http.Error(w, "unable to use PresetUserIdp: "+err.Error(), 500)
 		return
 	}
 	r.Header.Set("Authorization", token)
@@ -70,7 +74,7 @@ func (this *PresetUserIdp) GenerateUserTokenById(userid string) (token string, e
 	jwtoken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	unsignedTokenString, err := jwtoken.SigningString()
 	if err != nil {
-		log.Println("ERROR: GenerateUserTokenById::SigningString()", err, userid)
+		log.Println("ERROR: PresetUserIdp::SigningString()", err, userid)
 		return token, err
 	}
 	tokenString := strings.Join([]string{unsignedTokenString, ""}, ".")

@@ -17,17 +17,18 @@
 package command
 
 import (
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/external-task-worker/util"
 	"github.com/google/uuid"
-	"log"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
@@ -57,13 +58,13 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		return http.StatusInternalServerError, "unable to load service: " + err.Error()
 	}
 
-	function, err := this.iot.GetFunction(token.Jwt(), functionId)
+	function, err := this.iot.GetFunction(functionId)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load function: " + err.Error()
 	}
 
 	if characteristicId == "" && function.ConceptId != "" {
-		concept, err := this.iot.GetConcept(token.Jwt(), function.ConceptId)
+		concept, err := this.iot.GetConcept(function.ConceptId)
 		if err != nil {
 			return http.StatusInternalServerError, "unable to load concept: " + err.Error()
 		}
@@ -77,7 +78,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 
 	var aspectNode *model.AspectNode
 	if aspectId != "" {
-		temp, err := this.iot.GetAspectNode(token.Jwt(), aspectId)
+		temp, err := this.iot.GetAspectNode(aspectId)
 		if err != nil {
 			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error()
 		}

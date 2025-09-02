@@ -19,11 +19,12 @@ package marshaller
 import (
 	"context"
 	"errors"
+	"net/http"
+
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
-	"net/http"
 )
 
 func NewMarshallerIot(ctx context.Context, conf configuration.Config, a *auth.OpenidToken, iot interfaces.Iot) (result *MarshallerIot, err error) {
@@ -37,11 +38,7 @@ type MarshallerIot struct {
 }
 
 func (this *MarshallerIot) GetAspectNode(id string) (result model.AspectNode, err error) {
-	token, err := this.auth.EnsureAccess(this.config)
-	if err != nil {
-		return result, err
-	}
-	temp, err := this.iot.GetAspectNode(token, id)
+	temp, err := this.iot.GetAspectNode(id)
 	if err != nil {
 		return result, err
 	}

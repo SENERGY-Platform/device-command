@@ -19,11 +19,12 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 
 	"net/url"
 )

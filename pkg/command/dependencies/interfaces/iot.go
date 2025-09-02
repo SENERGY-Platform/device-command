@@ -18,22 +18,23 @@ package interfaces
 
 import (
 	"context"
+
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 )
 
 type Iot interface {
-	ListFunctions(token string) (functionInfos []model.Function, err error)
-	GetFunction(token string, id string) (result model.Function, err error)
-	GetConcept(token string, id string) (result model.Concept, err error)
-	GetCharacteristic(token string, id string) (result model.Characteristic, err error)
 	GetDevice(token string, id string) (result model.Device, err error)
-	GetProtocol(token string, id string) (result model.Protocol, err error)
+	GetDeviceGroup(token string, id string) (result model.DeviceGroup, err error)
 	GetService(token string, device model.Device, id string) (result model.Service, err error)
 	GetDeviceType(token string, id string) (result model.DeviceType, err error)
-	GetDeviceGroup(token string, id string) (result model.DeviceGroup, err error)
-	GetAspectNode(token string, id string) (model.AspectNode, error)
-	GetConceptIds(token string) ([]string, error)
+	GetProtocol(token string, id string) (result model.Protocol, err error)
+	ListFunctions() (functionInfos []model.Function, err error)
+	GetFunction(id string) (result model.Function, err error)
+	GetConcept(id string) (result model.Concept, err error)
+	GetCharacteristic(id string) (result model.Characteristic, err error)
+	GetAspectNode(id string) (model.AspectNode, error)
+	GetConceptIds() ([]string, error)
 }
 
 type IotFactory func(ctx context.Context, config configuration.Config) (Iot, error)

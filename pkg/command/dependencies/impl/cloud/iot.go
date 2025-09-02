@@ -20,12 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/device-repository/lib/client"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/service-commons/pkg/cache"
-	"github.com/SENERGY-Platform/service-commons/pkg/signal"
 	"io"
 	"log"
 	"net/http"
@@ -33,6 +27,13 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/device-repository/lib/client"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	"github.com/SENERGY-Platform/service-commons/pkg/cache"
+	"github.com/SENERGY-Platform/service-commons/pkg/signal"
 )
 
 type Iot struct {
@@ -96,9 +97,13 @@ func NewIotWithDeviceRepoClient(config configuration.Config, cache *cache.Cache,
 	return &Iot{config: config, cache: cache, cacheDevices: cacheDevices, cacheExpiration: cacheExpiration, client: client}
 }
 
-func (this *Iot) GetFunction(token string, id string) (result model.Function, err error) {
-	return cache.Use(this.cache, "function."+id, func() (model.Function, error) {
-		return this.getFunction(token, id)
+func (this *Iot) GetFunction(id string) (result model.Function, err error) {
+	use := cache.Use[model.Function]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[model.Function]
+	}
+	return use(this.cache, "function."+id, func() (model.Function, error) {
+		return this.getFunction(id)
 	}, func(function model.Function) error {
 		if function.Id == "" {
 			return errors.New("invalid function loaded from cache")
@@ -107,14 +112,18 @@ func (this *Iot) GetFunction(token string, id string) (result model.Function, er
 	}, this.cacheExpiration)
 }
 
-func (this *Iot) getFunction(token string, id string) (result model.Function, err error) {
+func (this *Iot) getFunction(id string) (result model.Function, err error) {
 	result, err, _ = this.client.GetFunction(id)
 	return
 }
 
-func (this *Iot) GetConcept(token string, id string) (result model.Concept, err error) {
-	return cache.Use(this.cache, "concept."+id, func() (model.Concept, error) {
-		return this.getConcept(token, id)
+func (this *Iot) GetConcept(id string) (result model.Concept, err error) {
+	use := cache.Use[model.Concept]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[model.Concept]
+	}
+	return use(this.cache, "concept."+id, func() (model.Concept, error) {
+		return this.getConcept(id)
 	}, func(concept model.Concept) error {
 		if concept.Id == "" {
 			return errors.New("invalid concept loaded from cache")
@@ -123,14 +132,18 @@ func (this *Iot) GetConcept(token string, id string) (result model.Concept, err 
 	}, this.cacheExpiration)
 }
 
-func (this *Iot) getConcept(token string, id string) (result model.Concept, err error) {
+func (this *Iot) getConcept(id string) (result model.Concept, err error) {
 	result, err, _ = this.client.GetConceptWithoutCharacteristics(id)
 	return
 }
 
 func (this *Iot) GetDevice(token string, id string) (result model.Device, err error) {
 	if this.cacheDevices {
-		return cache.Use(this.cache, "device."+id, func() (model.Device, error) {
+		use := cache.Use[model.Device]
+		if this.config.AsyncCacheRefresh {
+			use = cache.UseWithAsyncRefresh[model.Device]
+		}
+		return use(this.cache, "device."+id, func() (model.Device, error) {
 			return this.getDevice(token, id)
 		}, func(device model.Device) error {
 			if device.Id == "" {
@@ -148,7 +161,11 @@ func (this *Iot) getDevice(token string, id string) (result model.Device, err er
 }
 
 func (this *Iot) GetProtocol(token string, id string) (result model.Protocol, err error) {
-	return cache.Use(this.cache, "protocol."+id, func() (model.Protocol, error) {
+	use := cache.Use[model.Protocol]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[model.Protocol]
+	}
+	return use(this.cache, "protocol."+id, func() (model.Protocol, error) {
 		return this.getProtocol(token, id)
 	}, func(protocol model.Protocol) error {
 		if protocol.Id == "" {
@@ -198,7 +215,11 @@ func (this *Iot) saveServiceToCache(service model.Service) {
 }
 
 func (this *Iot) GetDeviceType(token string, id string) (result model.DeviceType, err error) {
-	return cache.Use(this.cache, "device-type."+id, func() (model.DeviceType, error) {
+	use := cache.Use[model.DeviceType]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[model.DeviceType]
+	}
+	return use(this.cache, "device-type."+id, func() (model.DeviceType, error) {
 		return this.getDeviceType(token, id)
 	}, func(deviceType model.DeviceType) error {
 		if deviceType.Id == "" {
@@ -214,7 +235,11 @@ func (this *Iot) getDeviceType(token string, id string) (result model.DeviceType
 }
 
 func (this *Iot) GetDeviceGroup(token string, id string) (result model.DeviceGroup, err error) {
-	return cache.Use(this.cache, "device-group."+id, func() (model.DeviceGroup, error) {
+	use := cache.Use[model.DeviceGroup]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[model.DeviceGroup]
+	}
+	return use(this.cache, "device-group."+id, func() (model.DeviceGroup, error) {
 		return this.getDeviceGroup(token, id)
 	}, func(group model.DeviceGroup) error {
 		if group.Id == "" {
@@ -258,9 +283,13 @@ func (this *Iot) GetJson(token string, endpoint string, result interface{}) (err
 	return
 }
 
-func (this *Iot) GetAspectNode(token string, id string) (result model.AspectNode, err error) {
-	return cache.Use(this.cache, "aspect-nodes."+id, func() (model.AspectNode, error) {
-		return this.getAspectNode(token, id)
+func (this *Iot) GetAspectNode(id string) (result model.AspectNode, err error) {
+	use := cache.Use[model.AspectNode]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[model.AspectNode]
+	}
+	return use(this.cache, "aspect-nodes."+id, func() (model.AspectNode, error) {
+		return this.getAspectNode(id)
 	}, func(node model.AspectNode) error {
 		if node.Id == "" {
 			return errors.New("invalid aspect-node loaded from cache")
@@ -269,8 +298,8 @@ func (this *Iot) GetAspectNode(token string, id string) (result model.AspectNode
 	}, this.cacheExpiration)
 }
 
-func (this *Iot) getAspectNode(token string, id string) (result model.AspectNode, err error) {
-	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/aspect-nodes/"+url.QueryEscape(id), &result)
+func (this *Iot) getAspectNode(id string) (result model.AspectNode, err error) {
+	result, err, _ = this.client.GetAspectNode(id)
 	return
 }
 
@@ -278,7 +307,17 @@ type IdWrapper struct {
 	Id string `json:"id"`
 }
 
-func (this *Iot) GetConceptIds(token string) (ids []string, err error) {
+func (this *Iot) GetConceptIds() (ids []string, err error) {
+	use := cache.Use[[]string]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[[]string]
+	}
+	return use(this.cache, "concept_ids", func() ([]string, error) {
+		return this.getConceptIds()
+	}, cache.NoValidation[[]string], this.cacheExpiration)
+}
+
+func (this *Iot) getConceptIds() (ids []string, err error) {
 	limit := 1000
 	offset := 0
 	temp := []model.Concept{}
@@ -299,7 +338,17 @@ func (this *Iot) GetConceptIds(token string) (ids []string, err error) {
 	return ids, err
 }
 
-func (this *Iot) ListFunctions(token string) (functionInfos []model.Function, err error) {
+func (this *Iot) ListFunctions() (functionInfos []model.Function, err error) {
+	use := cache.Use[[]model.Function]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[[]model.Function]
+	}
+	return use(this.cache, "functions", func() ([]model.Function, error) {
+		return this.listFunctions()
+	}, cache.NoValidation[[]model.Function], this.cacheExpiration)
+}
+
+func (this *Iot) listFunctions() (functionInfos []model.Function, err error) {
 	limit := 1000
 	offset := 0
 	temp := []model.Function{}
@@ -318,9 +367,13 @@ func (this *Iot) ListFunctions(token string) (functionInfos []model.Function, er
 	return functionInfos, err
 }
 
-func (this *Iot) GetCharacteristic(token string, id string) (result model.Characteristic, err error) {
-	return cache.Use(this.cache, "characteristics."+id, func() (model.Characteristic, error) {
-		return this.getCharacteristic(token, id)
+func (this *Iot) GetCharacteristic(id string) (result model.Characteristic, err error) {
+	use := cache.Use[model.Characteristic]
+	if this.config.AsyncCacheRefresh {
+		use = cache.UseWithAsyncRefresh[model.Characteristic]
+	}
+	return use(this.cache, "characteristics."+id, func() (model.Characteristic, error) {
+		return this.getCharacteristic(id)
 	}, func(characteristic model.Characteristic) error {
 		if characteristic.Id == "" {
 			return errors.New("invalid characteristic loaded from cache")
@@ -329,7 +382,7 @@ func (this *Iot) GetCharacteristic(token string, id string) (result model.Charac
 	}, this.cacheExpiration)
 }
 
-func (this *Iot) getCharacteristic(token string, id string) (result model.Characteristic, err error) {
+func (this *Iot) getCharacteristic(id string) (result model.Characteristic, err error) {
 	result, err, _ = this.client.GetCharacteristic(id)
 	return
 }

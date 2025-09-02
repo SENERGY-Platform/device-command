@@ -2,7 +2,8 @@
     "debug":true,
     "server_port":"8080",
 
-    "cache_timeout": "60s",
+    "async_cache_refresh": false,
+    "cache_expiration": "60s",
     "cache_invalidation_all_kafka_topics": ["device-types", "protocols", "concepts", "characteristics", "functions", "aspects"],
     "device_kafka_topic": "devices",
     "device_group_kafka_topic": "device-groups",

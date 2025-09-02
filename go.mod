@@ -8,15 +8,16 @@ require (
 	github.com/IBM/sarama v1.43.3
 	github.com/SENERGY-Platform/converter v0.0.10
 	github.com/SENERGY-Platform/device-repository v0.2.27
-	github.com/SENERGY-Platform/external-task-worker v0.0.38
-	github.com/SENERGY-Platform/marshaller v0.0.21
+	github.com/SENERGY-Platform/external-task-worker v0.0.40
+	github.com/SENERGY-Platform/marshaller v0.0.22
+	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1
 	github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4
-	github.com/SENERGY-Platform/service-commons v0.0.0-20250624131956-6c08be412ea0
+	github.com/SENERGY-Platform/service-commons v0.0.0-20250902093132-914d0fc9d57e
 	github.com/eclipse/paho.mqtt.golang v1.4.3
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/ory/dockertest/v3 v3.10.0
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/segmentio/kafka-go v0.4.47
 )
@@ -31,9 +32,8 @@ require (
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
 	github.com/SENERGY-Platform/developer-notifications v0.0.4 // indirect
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1 // indirect
-	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1 // indirect
 	github.com/SENERGY-Platform/permissions-v2 v0.0.38 // indirect
-	github.com/SENERGY-Platform/process-incident-api v0.0.8 // indirect
+	github.com/SENERGY-Platform/process-incident-api v0.0.9 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -60,7 +60,6 @@ require (
 	github.com/go-openapi/spec v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
@@ -94,6 +93,7 @@ require (
 	github.com/opencontainers/runc v1.1.13 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
@@ -139,3 +139,4 @@ require (
 //uncomment to test local changes of external-task-worker
 //replace github.com/SENERGY-Platform/external-task-worker => ../external-task-worker
 //replace github.com/SENERGY-Platform/converter => ../converter-service
+//replace github.com/SENERGY-Platform/service-commons => ../service-commons

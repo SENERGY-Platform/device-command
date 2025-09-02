@@ -17,12 +17,13 @@
 package command
 
 import (
-	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"log"
 	"net/http"
 	"sort"
 	"sync"
+
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 )
 
 func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
@@ -83,7 +84,7 @@ func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId 
 
 		aspect := model.AspectNode{}
 		if aspectId != "" {
-			aspect, err = this.iot.GetAspectNode(token, aspectId)
+			aspect, err = this.iot.GetAspectNode(aspectId)
 			if err != nil {
 				log.Println("WARNING: unable to find aspect node, use aspect node without descendants", err)
 				aspect.Id = aspectId

@@ -17,10 +17,11 @@
 package command
 
 import (
-	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"hash/maphash"
 	"sync"
+
+	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 )
 
 func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string, preferEventValue bool) []BatchResultElement {
@@ -88,7 +89,7 @@ func (this *Command) expectedEventRequests(token auth.Token, batch []CommandMess
 				}
 				var aspectError error
 				if cmd.AspectId != "" {
-					_, aspectError = this.iot.GetAspectNode(token.Jwt(), cmd.AspectId)
+					_, aspectError = this.iot.GetAspectNode(cmd.AspectId)
 				}
 				if aspectError == nil && isMeasuringFunctionId(cmd.FunctionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
 					count = count + 1

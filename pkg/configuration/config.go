@@ -19,7 +19,6 @@ package configuration
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/segmentio/kafka-go"
 	"log"
 	"os"
 	"reflect"
@@ -27,6 +26,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/segmentio/kafka-go"
 )
 
 type Config struct {
@@ -36,6 +37,7 @@ type Config struct {
 	MarshallerUrl       string `json:"marshaller_url"`
 	DeviceRepositoryUrl string `json:"device_repository_url"`
 
+	AsyncCacheRefresh               bool     `json:"async_cache_refresh"`
 	CacheExpiration                 string   `json:"cache_expiration"`
 	CacheInvalidationAllKafkaTopics []string `json:"cache_invalidation_all_kafka_topics"`
 	DeviceKafkaTopic                string   `json:"device_kafka_topic"`

@@ -22,6 +22,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
@@ -36,12 +37,15 @@ type OpenidToken struct {
 	RefreshToken     string    `json:"refresh_token"`
 	TokenType        string    `json:"token_type"`
 	RequestTime      time.Time `json:"-"`
+	mux              sync.Mutex
 }
 
 func (openid *OpenidToken) EnsureAccess(config configuration.Config) (token string, err error) {
 	if !config.AuthEnabled() {
 		return "", nil
 	}
+	openid.mux.Lock()
+	defer openid.mux.Unlock()
 
 	duration := time.Now().Sub(openid.RequestTime).Seconds()
 

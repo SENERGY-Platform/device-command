@@ -9,10 +9,11 @@ require (
 	github.com/SENERGY-Platform/converter v0.0.10
 	github.com/SENERGY-Platform/device-repository v0.2.27
 	github.com/SENERGY-Platform/external-task-worker v0.0.40
+	github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1
 	github.com/SENERGY-Platform/marshaller v0.0.22
 	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1
 	github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4
-	github.com/SENERGY-Platform/service-commons v0.0.0-20250902093132-914d0fc9d57e
+	github.com/SENERGY-Platform/service-commons v0.0.0-20250903062011-a02544bd69e6
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
@@ -31,7 +32,6 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
 	github.com/SENERGY-Platform/developer-notifications v0.0.4 // indirect
-	github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1 // indirect
 	github.com/SENERGY-Platform/permissions-v2 v0.0.38 // indirect
 	github.com/SENERGY-Platform/process-incident-api v0.0.9 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

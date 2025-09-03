@@ -147,12 +147,6 @@ func (this *Iot) GetDevice(token string, id string) (result model.Device, err er
 			use = cache.UseWithAsyncRefresh[model.Device]
 		}
 		return use(this.cache, "device."+id, func() (model.Device, error) {
-			if this.overwriteAuthTokens {
-				token, err = this.auth.EnsureAccess(this.config)
-				if err != nil {
-					return model.Device{}, err
-				}
-			}
 			return this.getDevice(token, id)
 		}, func(device model.Device) error {
 			if device.Id == "" {
@@ -165,7 +159,14 @@ func (this *Iot) GetDevice(token string, id string) (result model.Device, err er
 }
 
 func (this *Iot) getDevice(token string, id string) (result model.Device, err error) {
+	if this.overwriteAuthTokens {
+		token, err = this.auth.EnsureAccess(this.config)
+		if err != nil {
+			return model.Device{}, err
+		}
+	}
 	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/devices/"+url.QueryEscape(id), &result)
+	log.Println("DEBUG: /devices/{id}", id, err, token) //TODO: remove
 	return
 }
 
@@ -175,12 +176,6 @@ func (this *Iot) GetProtocol(token string, id string) (result model.Protocol, er
 		use = cache.UseWithAsyncRefresh[model.Protocol]
 	}
 	return use(this.cache, "protocol."+id, func() (model.Protocol, error) {
-		if this.overwriteAuthTokens {
-			token, err = this.auth.EnsureAccess(this.config)
-			if err != nil {
-				return model.Protocol{}, err
-			}
-		}
 		return this.getProtocol(token, id)
 	}, func(protocol model.Protocol) error {
 		if protocol.Id == "" {
@@ -191,6 +186,12 @@ func (this *Iot) GetProtocol(token string, id string) (result model.Protocol, er
 }
 
 func (this *Iot) getProtocol(token string, id string) (result model.Protocol, err error) {
+	if this.overwriteAuthTokens {
+		token, err = this.auth.EnsureAccess(this.config)
+		if err != nil {
+			return model.Protocol{}, err
+		}
+	}
 	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/protocols/"+url.QueryEscape(id), &result)
 	return
 }
@@ -235,12 +236,6 @@ func (this *Iot) GetDeviceType(token string, id string) (result model.DeviceType
 		use = cache.UseWithAsyncRefresh[model.DeviceType]
 	}
 	return use(this.cache, "device-type."+id, func() (model.DeviceType, error) {
-		if this.overwriteAuthTokens {
-			token, err = this.auth.EnsureAccess(this.config)
-			if err != nil {
-				return model.DeviceType{}, err
-			}
-		}
 		return this.getDeviceType(token, id)
 	}, func(deviceType model.DeviceType) error {
 		if deviceType.Id == "" {
@@ -251,6 +246,12 @@ func (this *Iot) GetDeviceType(token string, id string) (result model.DeviceType
 }
 
 func (this *Iot) getDeviceType(token string, id string) (result model.DeviceType, err error) {
+	if this.overwriteAuthTokens {
+		token, err = this.auth.EnsureAccess(this.config)
+		if err != nil {
+			return model.DeviceType{}, err
+		}
+	}
 	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/device-types/"+url.QueryEscape(id), &result)
 	return
 }
@@ -261,12 +262,6 @@ func (this *Iot) GetDeviceGroup(token string, id string) (result model.DeviceGro
 		use = cache.UseWithAsyncRefresh[model.DeviceGroup]
 	}
 	return use(this.cache, "device-group."+id, func() (model.DeviceGroup, error) {
-		if this.overwriteAuthTokens {
-			token, err = this.auth.EnsureAccess(this.config)
-			if err != nil {
-				return model.DeviceGroup{}, err
-			}
-		}
 		return this.getDeviceGroup(token, id)
 	}, func(group model.DeviceGroup) error {
 		if group.Id == "" {
@@ -277,6 +272,12 @@ func (this *Iot) GetDeviceGroup(token string, id string) (result model.DeviceGro
 }
 
 func (this *Iot) getDeviceGroup(token string, id string) (result model.DeviceGroup, err error) {
+	if this.overwriteAuthTokens {
+		token, err = this.auth.EnsureAccess(this.config)
+		if err != nil {
+			return model.DeviceGroup{}, err
+		}
+	}
 	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/device-groups/"+url.QueryEscape(id), &result)
 	return
 }

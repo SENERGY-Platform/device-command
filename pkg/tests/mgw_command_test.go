@@ -69,6 +69,10 @@ func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath s
 	config.IotFallbackFile = fallbackPath
 	config.UseIotFallback = true
 	config.AsyncCacheRefresh = true
+	config.RequestUserIdp = "user:mgw-fallback-token"
+	config.AuthClientId = "test"
+	config.AuthUserName = "test"
+	config.AuthPassword = "test"
 
 	config.ServerPort, err = GetFreePort()
 	if err != nil {
@@ -352,7 +356,7 @@ func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath s
 		return
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	t.Run("device setTemperature", sendCommand(config, command.CommandMessage{
 		FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",

@@ -40,6 +40,7 @@ func authMock(config configuration.Config, ctx context.Context, wg *sync.WaitGro
 	handler := func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Println("auth mock:", json.NewEncoder(writer).Encode(auth.OpenidToken{
 			AccessToken: token,
+			ExpiresIn:   3600,
 		}))
 	}
 	server := httptest.NewServer(http.HandlerFunc(handler))

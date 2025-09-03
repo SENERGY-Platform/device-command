@@ -166,7 +166,6 @@ func (this *Iot) getDevice(token string, id string) (result model.Device, err er
 		}
 	}
 	err = this.GetJson(token, this.config.DeviceRepositoryUrl+"/devices/"+url.QueryEscape(id), &result)
-	log.Println("DEBUG: /devices/{id}", id, err, token) //TODO: remove
 	return
 }
 

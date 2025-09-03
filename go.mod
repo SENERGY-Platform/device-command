@@ -13,7 +13,7 @@ require (
 	github.com/SENERGY-Platform/marshaller v0.0.22
 	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1
 	github.com/SENERGY-Platform/models/go v0.0.0-20241007061544-de7132ae94e4
-	github.com/SENERGY-Platform/service-commons v0.0.0-20250903062011-a02544bd69e6
+	github.com/SENERGY-Platform/service-commons v0.0.0-20250903071414-1b34f1965afa
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0

@@ -40,6 +40,7 @@ type ConceptRepo struct {
 	characteristicsOfFunction          map[string][]string
 	functionToConcept                  map[string]string
 	mux                                sync.Mutex
+	initmux                            sync.Mutex
 	auth                               *auth.OpenidToken
 	config                             configuration.Config
 }
@@ -78,6 +79,8 @@ func NewConceptRepo(ctx context.Context, config configuration.Config, auth *auth
 }
 
 func (this *ConceptRepo) ensureInit() {
+	this.initmux.Lock()
+	defer this.initmux.Unlock()
 	if !this.init {
 		err := this.Load()
 		if err != nil {

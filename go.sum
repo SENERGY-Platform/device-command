@@ -36,8 +36,8 @@ github.com/SENERGY-Platform/permissions-v2 v0.0.38 h1:zrzIzQ2TB4LENaVZFLK+dpO4KB
 github.com/SENERGY-Platform/permissions-v2 v0.0.38/go.mod h1:YtsSQK77GjQ6Df+HBA6e1/VB2OUihY1XcfQAhv/dRf0=
 github.com/SENERGY-Platform/process-incident-api v0.0.9 h1:NrKdMCrtDs2sDiQ44G8SI54ZLqy5uzhh+kNhXA9q/r0=
 github.com/SENERGY-Platform/process-incident-api v0.0.9/go.mod h1:yD2wGOUp3a8s3OpCM6fxmNX0qLLuMRwi4GV/C2xBgJQ=
-github.com/SENERGY-Platform/service-commons v0.0.0-20250903062011-a02544bd69e6 h1:BBxI0zz5SIBMHPKhlV3fBI63ecWL71btuDUgYubg2EM=
-github.com/SENERGY-Platform/service-commons v0.0.0-20250903062011-a02544bd69e6/go.mod h1:1p2CQPNtler5leXqNgaOfr7DlgZUydrQlQYA97ycm4k=
+github.com/SENERGY-Platform/service-commons v0.0.0-20250903071414-1b34f1965afa h1:M2zfxq28OMVM8CbVNYYfpjiFant7GeucJ8Kdb1FE5Oo=
+github.com/SENERGY-Platform/service-commons v0.0.0-20250903071414-1b34f1965afa/go.mod h1:1p2CQPNtler5leXqNgaOfr7DlgZUydrQlQYA97ycm4k=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 h1:N7oVaKyGp8bttX0bfZGmcGkjz7DLQXhAn3DNd3T0ous=

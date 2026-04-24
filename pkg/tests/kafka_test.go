@@ -18,25 +18,20 @@ package tests
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/test/docker"
 	"sync"
 	"time"
+
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/external-task-worker/lib/test/docker"
 )
 
 func kafkaEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup) (config configuration.Config, err error) {
 	config = initialConfig
 	config.InitTopics = true
-
-	_, zkIp, err := docker.Zookeeper(ctx, wg)
-	if err != nil {
-		return config, err
-	}
-
-	zookeeperUrl := zkIp + ":2181"
+	//config.KafkaConsumerGroup = uuid.NewString()
 
 	//kafka
-	kafkaUrl, err := docker.Kafka(ctx, wg, zookeeperUrl)
+	kafkaUrl, err := docker.Kafka(ctx, wg)
 	if err != nil {
 		return config, err
 	}

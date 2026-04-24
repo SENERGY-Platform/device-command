@@ -21,18 +21,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"runtime/debug"
+
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
+	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/external-task-worker/util"
-	"log"
-	"runtime/debug"
 )
 
 func ComFactory(ctx context.Context, config configuration.Config, responseListener func(msg messages.ProtocolMsg) error, errorListener func(msg messages.ProtocolMsg) error) (producer interfaces.Producer, err error) {
-	comFactory := kafka.Factory
+	//comFactory := kafka.Factory
+	comFactory := comswitch.Factory
 	libConfig := createLibConfig(config)
 	resp := getLibListener(responseListener)
 	errL := getLibListener(errorListener)

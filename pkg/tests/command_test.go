@@ -21,6 +21,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/IBM/sarama"
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
@@ -33,16 +44,6 @@ import (
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/models/go/models"
-	"io"
-	"log"
-	"net"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestCommandUnscaled(t *testing.T) {
@@ -1558,7 +1559,7 @@ func sendCommand(config configuration.Config, commandMessage command.CommandMess
 			return
 		}
 		if resp.StatusCode != expectedCode {
-			t.Error(resp.StatusCode, string(actualContent))
+			t.Errorf("\nactual-status-code=%v\nepected-status-code=%#v\nactual-content=%#v", resp.StatusCode, expectedCode, string(actualContent))
 			return
 		}
 		if strings.TrimSpace(string(actualContent)) != expectedContent {

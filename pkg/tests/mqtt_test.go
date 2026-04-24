@@ -18,13 +18,12 @@ package tests
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	paho "github.com/eclipse/paho.mqtt.golang"
-	"github.com/ory/dockertest/v3"
 	"log"
-	"math/rand"
-	"strconv"
 	"sync"
+
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func mqttEnv(config configuration.Config, ctx context.Context, wg *sync.WaitGroup) (configuration.Config, error) {
@@ -38,38 +37,49 @@ func mqttEnv(config configuration.Config, ctx context.Context, wg *sync.WaitGrou
 
 func Mqtt(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress string, err error) {
 	log.Println("start mqtt broker")
-	pool, err := dockertest.NewPool("")
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:           "eclipse-mosquitto:1.6.12",
+			ExposedPorts:    []string{"1883/tcp"},
+			WaitingFor:      wait.ForListeningPort("1883/tcp"),
+			AlwaysPullImage: true,
+		},
+		Started: true,
+	})
 	if err != nil {
 		return "", "", err
 	}
-	container, err := pool.Run("eclipse-mosquitto", "1.6.12", []string{})
-	if err != nil {
-		return "", "", err
-	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer func() {
+			log.Println("DEBUG: remove container", container.Terminate(context.Background()))
+		}()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container " + container.Container.Name)
-		log.Println(container.Close())
+		/*
+			reader, err := container.Logs(context.Background())
+			if err != nil {
+				log.Println("ERROR: unable to get container log")
+				return
+			}
+			buf := new(strings.Builder)
+			io.Copy(buf, reader)
+			fmt.Println("MOSQUITTO LOGS: ------------------------------------------")
+			fmt.Println(buf.String())
+			fmt.Println("\n---------------------------------------------------------------")
+		//*/
 	}()
-	//go Dockerlog(pool, ctx, container, "MQTT-BROKER")
-	hostPort = container.GetPort("1883/tcp")
-	err = pool.Retry(func() error {
-		log.Println("try to connection to broker...")
-		options := paho.NewClientOptions().
-			SetAutoReconnect(true).
-			SetCleanSession(false).
-			SetClientID("try-test-connection-" + strconv.Itoa(rand.Int())).
-			AddBroker("tcp://localhost:" + hostPort)
 
-		client := paho.NewClient(options)
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-			log.Println("Error on Mqtt.Connect(): ", token.Error())
-			return token.Error()
-		}
-		defer client.Disconnect(0)
-		return nil
-	})
-	return hostPort, container.Container.NetworkSettings.IPAddress, err
+	ipAddress, err = container.ContainerIP(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	temp, err := container.MappedPort(ctx, "1883/tcp")
+	if err != nil {
+		return "", "", err
+	}
+	hostPort = temp.Port()
+
+	return hostPort, ipAddress, err
 }

@@ -19,13 +19,13 @@ package mgw
 import (
 	"context"
 	"encoding/json"
+	"strings"
+
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/mqtt"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/google/uuid"
-	"log"
-	"strings"
 )
 
 func ComFactory(ctx context.Context, config configuration.Config, responseListener func(msg messages.ProtocolMsg) error, errorListener func(msg messages.ProtocolMsg) error) (producer interfaces.Producer, err error) {
@@ -51,19 +51,19 @@ func (this *ComImpl) mgwSubscriptions(client *mqtt.Mqtt, listener func(msg messa
 		msg := Command{}
 		err := json.Unmarshal(message, &msg)
 		if err != nil {
-			log.Println("ERROR: unable to unmarshal response to mgw command wrapper", err)
+			this.config.GetLogger().Error("unable to unmarshal response to mgw command wrapper", "error", err)
 			return
 		}
 		if strings.HasPrefix(msg.CommandId, this.config.MgwCorrelationIdPrefix) {
 			convertedMsg, err := this.convertResponseMessage(msg)
 			if err != nil {
-				log.Println("ERROR: unable to convert response", err)
+				this.config.GetLogger().Error("unable to convert response", "error", err)
 				return
 			}
 			go func() {
 				err = listener(convertedMsg)
 				if err != nil {
-					log.Println("ERROR: unable to handle response", err)
+					this.config.GetLogger().Error("unable to handle response", "error", err)
 					return
 				}
 			}()
@@ -80,13 +80,13 @@ func (this *ComImpl) mgwSubscriptions(client *mqtt.Mqtt, listener func(msg messa
 		if strings.HasPrefix(correlationId, this.config.MgwCorrelationIdPrefix) {
 			convertedMsg, err := this.convertErrorMessage(correlationId, string(message))
 			if err != nil {
-				log.Println("ERROR: unable to convert error response", err)
+				this.config.GetLogger().Error("unable to convert error response", "error", err)
 				return
 			}
 			go func() {
 				err = errorListener(convertedMsg)
 				if err != nil {
-					log.Println("ERROR: unable to handle response", err)
+					this.config.GetLogger().Error("unable to handle response", "error", err)
 					return
 				}
 			}()

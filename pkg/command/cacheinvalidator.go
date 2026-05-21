@@ -18,12 +18,11 @@ package command
 
 import (
 	"context"
+	"time"
+
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache/invalidator"
 	"github.com/SENERGY-Platform/service-commons/pkg/kafka"
-	"log"
-	"runtime/debug"
-	"time"
 )
 
 func StartKafkaCacheInvalidator(ctx context.Context, config configuration.Config) (err error) {
@@ -36,8 +35,7 @@ func StartKafkaCacheInvalidator(ctx context.Context, config configuration.Config
 		Debug:                  config.Debug,
 		PartitionWatchInterval: time.Minute,
 		OnError: func(err error) {
-			log.Println("ERROR:", err)
-			debug.PrintStack()
+			config.GetLogger().Error("kafka consumer error for cache invalidator", "error", err)
 		},
 		InitTopic: config.InitTopics,
 	}

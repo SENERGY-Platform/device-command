@@ -17,7 +17,7 @@
 package util
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -72,13 +72,12 @@ func (this *PresetUserIdp) GenerateUserTokenById(userid string) (token string, e
 		Subject:   userid,
 	}
 	jwtoken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	unsignedTokenString, err := jwtoken.SigningString()
+	signedTokenString, err := jwtoken.SigningString()
 	if err != nil {
-		log.Println("ERROR: PresetUserIdp::SigningString()", err, userid)
+		this.config.GetLogger().Error("unable to sign generated user jwt token", "error", err, "userId", userid)
 		return token, err
 	}
-	tokenString := strings.Join([]string{unsignedTokenString, ""}, ".")
-	return "Bearer " + tokenString, nil
+	return fmt.Sprintf("Bearer %s.", signedTokenString), nil
 }
 
 func (this *PresetUserIdp) GetUserId() (userId string, err error) {

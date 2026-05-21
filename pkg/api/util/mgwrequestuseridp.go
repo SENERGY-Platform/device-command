@@ -19,15 +19,15 @@ package util
 import (
 	"context"
 	"fmt"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib/client"
-	"github.com/golang-jwt/jwt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib/client"
+	"github.com/golang-jwt/jwt"
 )
 
 func NewMgwRequestUserIdp(config configuration.Config, handler http.Handler) (http.Handler, error) {
@@ -77,13 +77,12 @@ func (this *MgwRequestUserIdpMiddleWare) GenerateUserTokenById(userid string) (t
 		Subject:   userid,
 	}
 	jwtoken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	unsignedTokenString, err := jwtoken.SigningString()
+	signedTokenString, err := jwtoken.SigningString()
 	if err != nil {
-		log.Println("ERROR: GenerateUserTokenById::SigningString()", err, userid)
+		this.config.GetLogger().Error("unable to sign generated user jwt token", "error", err, "userId", userid)
 		return token, err
 	}
-	tokenString := strings.Join([]string{unsignedTokenString, ""}, ".")
-	return "Bearer " + tokenString, nil
+	return fmt.Sprintf("Bearer %s.", signedTokenString), nil
 }
 
 func (this *MgwRequestUserIdpMiddleWare) GetUserId() (userId string, err error) {

@@ -17,7 +17,7 @@
 package command
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"sort"
 	"sync"
@@ -40,9 +40,7 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 		go func(sub SubCommand) {
 			defer wg.Done()
 			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectId, input, timeout, preferEventValue, characteristicId)
-			if this.config.Debug {
-				log.Println("DEBUG: group sub result:", tempCode, temp)
-			}
+			this.config.GetLogger().Debug("group sub result", "user", token.GetUserId(), "code", tempCode, "result", fmt.Sprintf("%#v", temp))
 			if tempCode == http.StatusOK {
 				results = append(results, temp)
 			} else {
@@ -86,7 +84,7 @@ func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId 
 		if aspectId != "" {
 			aspect, err = this.iot.GetAspectNode(aspectId)
 			if err != nil {
-				log.Println("WARNING: unable to find aspect node, use aspect node without descendants", err)
+				this.config.GetLogger().Warn("unable to find aspect node, use aspect node without descendants", "aspect_id", aspectId, "error", err)
 				aspect.Id = aspectId
 				err = nil
 			}

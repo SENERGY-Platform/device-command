@@ -44,6 +44,7 @@ import (
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/models/go/models"
+	"github.com/google/uuid"
 )
 
 func TestCommandUnscaled(t *testing.T) {
@@ -973,7 +974,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 
 	err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
 		KafkaUrl:       config.KafkaUrl,
-		GroupId:        "test-connector-mock",
+		GroupId:        uuid.NewString(),
 		Topic:          "moses",
 		MinBytes:       int(config.KafkaConsumerMinBytes),
 		MaxBytes:       int(config.KafkaConsumerMaxBytes),
@@ -981,6 +982,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		TopicConfigMap: config.KafkaTopicConfigs,
 	}, func(_ string, msg []byte, time time.Time) error {
 		t.Log("MESSAGE:", string(msg))
+		log.Println("MESSAGE:", string(msg))
 		message := messages.ProtocolMsg{}
 		err := json.Unmarshal(msg, &message)
 		if err != nil {

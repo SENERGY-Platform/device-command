@@ -17,7 +17,7 @@
 package util
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 )
@@ -27,7 +27,7 @@ var VersionTxtFile = "version.txt"
 func NewVersionHeaderMiddleware(handler http.Handler) http.Handler {
 	version, err := os.ReadFile(VersionTxtFile)
 	if err != nil {
-		log.Println("unable to find version.txt")
+		slog.Warn("unable to find version.txt", "error", err)
 		return handler
 	}
 	return &VersionHeaderMiddleware{handler: handler, version: string(version)}

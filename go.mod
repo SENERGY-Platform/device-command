@@ -8,10 +8,10 @@ require (
 	github.com/SENERGY-Platform/device-repository v0.2.43
 	github.com/SENERGY-Platform/external-task-worker v0.0.43
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.6.0
-	github.com/SENERGY-Platform/marshaller v0.0.22
+	github.com/SENERGY-Platform/marshaller v0.0.23
 	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1
 	github.com/SENERGY-Platform/models/go v0.0.0-20260302084452-04ca9ee69c93
-	github.com/SENERGY-Platform/service-commons v0.0.0-20260423104942-3cd90b7ab170
+	github.com/SENERGY-Platform/service-commons v0.0.0-20260507090252-155b04bb4c46
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
@@ -19,6 +19,7 @@ require (
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/segmentio/kafka-go v0.4.50
+	github.com/testcontainers/testcontainers-go v0.40.0
 )
 
 require (
@@ -30,8 +31,8 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
 	github.com/SENERGY-Platform/developer-notifications v0.0.5 // indirect
-	github.com/SENERGY-Platform/permissions-v2 v0.0.41 // indirect
-	github.com/SENERGY-Platform/process-incident-api v0.0.10 // indirect
+	github.com/SENERGY-Platform/permissions-v2 v0.0.42 // indirect
+	github.com/SENERGY-Platform/process-incident-api v0.0.11 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -111,7 +112,6 @@ require (
 	github.com/swaggo/files v1.0.1 // indirect
 	github.com/swaggo/http-swagger v1.3.4 // indirect
 	github.com/swaggo/swag v1.16.6 // indirect
-	github.com/testcontainers/testcontainers-go v0.40.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
 	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect

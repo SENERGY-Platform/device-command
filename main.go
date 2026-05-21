@@ -19,13 +19,14 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/SENERGY-Platform/device-command/pkg"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/SENERGY-Platform/device-command/pkg"
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 )
 
 func main() {
@@ -37,13 +38,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("wait for cluster routing")
+	config.GetLogger().Info("wait for cluster routing")
 	time.Sleep(10 * time.Second)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	err = pkg.Start(ctx, config)
 	if err != nil {
+		config.GetLogger().Error("FATAL: start failed", "error", err)
 		log.Fatal(err)
 	}
 
@@ -51,7 +53,7 @@ func main() {
 		shutdown := make(chan os.Signal, 1)
 		signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 		sig := <-shutdown
-		log.Println("received shutdown signal", sig)
+		config.GetLogger().Info("shutdown", "signal", sig)
 		cancel()
 	}()
 

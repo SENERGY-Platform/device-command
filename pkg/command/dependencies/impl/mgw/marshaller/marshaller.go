@@ -20,6 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
+	"runtime/debug"
+
 	converterService "github.com/SENERGY-Platform/converter/lib/converter"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
@@ -31,8 +35,6 @@ import (
 	marshaller_service "github.com/SENERGY-Platform/marshaller/lib/marshaller"
 	marshaller_service_model "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	marshaller_service_v2 "github.com/SENERGY-Platform/marshaller/lib/marshaller/v2"
-	"log"
-	"runtime/debug"
 )
 
 func NewMarshaller(ctx context.Context, conf configuration.Config, iot interfaces.Iot) (*Marshaller, error) {
@@ -152,7 +154,7 @@ func (this *Marshaller) UnmarshalV2(request marshaller.UnmarshallingV2Request) (
 	if request.Path == "" {
 		paths := this.v2.GetOutputPaths(mockService, request.FunctionId, mockAspect)
 		if len(paths) > 1 {
-			log.Println("WARNING: only first path found by FunctionId and AspectNode is used for Unmarshal:", paths)
+			slog.Warn("only first path found by FunctionId and AspectNode is used for Unmarshal", "paths", fmt.Sprintf("%#v", paths))
 		}
 		if len(paths) == 0 {
 			return result, errors.New("no output path found for criteria")

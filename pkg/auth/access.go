@@ -20,14 +20,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-
 	"net/url"
+
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 )
 
 type OpenidToken struct {
@@ -55,20 +54,20 @@ func (openid *OpenidToken) EnsureAccess(config configuration.Config) (token stri
 	}
 
 	if openid.RefreshToken != "" && openid.RefreshExpiresIn-config.AuthExpirationTimeBuffer > duration {
-		log.Println("refresh token", openid.RefreshExpiresIn, duration)
+		config.GetLogger().Debug("refresh token", "expires_in", openid.RefreshExpiresIn, "duration", duration)
 		err = refreshOpenidToken(openid, config)
 		if err != nil {
-			log.Println("WARNING: unable to use refreshtoken", err)
+			config.GetLogger().Warn("unable to refresh token", "error", err)
 		} else {
 			token = "Bearer " + openid.AccessToken
 			return
 		}
 	}
 
-	log.Println("get new access token")
+	config.GetLogger().Debug("get new access token")
 	err = getOpenidToken(openid, config)
 	if err != nil {
-		log.Println("ERROR: unable to get new access token", err)
+		config.GetLogger().Warn("unable to get new access token", "error", err)
 		openid = &OpenidToken{}
 	}
 	token = "Bearer " + openid.AccessToken
@@ -85,7 +84,7 @@ func getOpenidToken(token *OpenidToken, config configuration.Config) (err error)
 	})
 
 	if err != nil {
-		log.Println("ERROR: getOpenidToken::PostForm()", err)
+		config.GetLogger().Error("getOpenidToken::PostForm()", "error", err)
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {

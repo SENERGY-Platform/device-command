@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
-	"runtime/debug"
 	"strings"
 
 	"github.com/SENERGY-Platform/device-command/pkg/api/util"
@@ -56,15 +55,15 @@ func Start(ctx context.Context, config configuration.Config, command Command) (e
 	}
 	server := &http.Server{Addr: ":" + config.ServerPort, Handler: router}
 	go func() {
-		log.Println("listening on ", server.Addr)
+		config.GetLogger().Info("listening", "address", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			debug.PrintStack()
+			config.GetLogger().Error("FATAL: unable to start http server", "error", err)
 			log.Fatal("FATAL:", err)
 		}
 	}()
 	go func() {
 		<-ctx.Done()
-		log.Println("api shutdown", server.Shutdown(context.Background()))
+		config.GetLogger().Info("api shutdown", "result", server.Shutdown(context.Background()))
 	}()
 	return
 }
@@ -73,7 +72,7 @@ func GetRouter(config configuration.Config, command Command) (handler http.Handl
 	router := httprouter.New()
 	router.Handler(http.MethodGet, "/metrics", command.GetMetricsHttpHandler())
 	for _, e := range endpoints {
-		log.Println("add endpoint: " + runtime.FuncForPC(reflect.ValueOf(e).Pointer()).Name())
+		config.GetLogger().Info("add endpoint", "endpoint", runtime.FuncForPC(reflect.ValueOf(e).Pointer()).Name())
 		e(config, router, command)
 	}
 	handler = router

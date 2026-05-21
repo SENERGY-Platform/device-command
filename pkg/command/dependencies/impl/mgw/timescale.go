@@ -21,17 +21,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/models/go/models"
-	"io"
-	"log"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type Timescale struct {
@@ -107,7 +108,7 @@ func (this *Timescale) Query(token auth.Token, request []Request, timeout time.D
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("ERROR: unable to query /last-values", err)
+		slog.Error("unable to query /last-values", "error", err)
 		return result, err
 	}
 	defer resp.Body.Close()

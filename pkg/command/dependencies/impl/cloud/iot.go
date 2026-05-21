@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -200,7 +199,7 @@ func (this *Iot) GetService(token string, device model.Device, id string) (resul
 	if err != nil {
 		dt, err := this.GetDeviceType(token, device.DeviceTypeId)
 		if err != nil {
-			log.Println("ERROR: unable to load device-type", device.DeviceTypeId)
+			this.config.GetLogger().Error("unable to load device-type", "deviceTypeId", device.DeviceTypeId, "error", err)
 			return result, err
 		}
 		for _, service := range dt.Services {
@@ -209,7 +208,7 @@ func (this *Iot) GetService(token string, device model.Device, id string) (resul
 				return service, nil
 			}
 		}
-		log.Println("ERROR: unable to find service in device-type", device.DeviceTypeId, id)
+		this.config.GetLogger().Error("unable to find service in device-type", "deviceTypeId", device.DeviceTypeId, "serviceId", id, "error", "no matching service found in device-type")
 		return result, errors.New("service not found")
 	}
 	return
@@ -304,7 +303,7 @@ func (this *Iot) GetJson(token string, endpoint string, result interface{}) (err
 	}
 	err = json.NewDecoder(resp.Body).Decode(result)
 	if err != nil {
-		log.Println("ERROR:", err.Error())
+		this.config.GetLogger().Error("unable to decode json", "error", err)
 		debug.PrintStack()
 	}
 	return

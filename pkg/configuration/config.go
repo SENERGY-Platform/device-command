@@ -196,6 +196,9 @@ func handleEnvironmentVars(config *Config) {
 
 func (this *Config) GetLogger() *slog.Logger {
 	if this.logger == nil {
+		if this.Debug {
+			this.LogLevel = "debug"
+		}
 		info, ok := debug.ReadBuildInfo()
 		project := ""
 		org := ""
@@ -217,6 +220,8 @@ func (this *Config) GetLogger() *slog.Logger {
 			org,
 			project,
 		).With("project-group", "smart-service")
+		slog.SetDefault(this.logger)
+		slog.SetLogLoggerLevel(slog.LevelInfo)
 	}
 	return this.logger
 }

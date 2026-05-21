@@ -17,7 +17,6 @@
 package command
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -163,7 +162,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 
 	err = this.producer.SendCommand(protocolMessage)
 	if err != nil {
-		log.Println("ERROR:", err)
+		this.config.GetLogger().Error("unable to produce command message", "error", err)
 		this.register.Complete(taskId, http.StatusInternalServerError, "unable to produce message")
 	}
 	return this.register.WaitWithTimeout(taskId, timeoutDuration)

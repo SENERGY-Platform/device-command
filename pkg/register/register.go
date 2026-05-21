@@ -17,7 +17,7 @@
 package register
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -53,9 +53,7 @@ func (this *Register) Register(id string) {
 }
 
 func (this *Register) Complete(id string, code int, value interface{}) {
-	if this.debug {
-		log.Println("complete", id, code, value)
-	}
+	slog.Debug("register complete", "id", id, "code", code, "value", value)
 	this.mux.Lock()
 	defer this.mux.Unlock()
 	state, ok := this.register[id]

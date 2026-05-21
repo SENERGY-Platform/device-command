@@ -19,7 +19,6 @@ package marshaller
 import (
 	"context"
 	"errors"
-	"log"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -71,7 +70,7 @@ func NewConceptRepo(ctx context.Context, config configuration.Config, auth *auth
 		for range ticker.C {
 			err = result.Load()
 			if err != nil {
-				log.Println("WARNING: unable to update concept repository", err)
+				config.GetLogger().Warn("unable to update concept repository", "error", err)
 			}
 		}
 	}()
@@ -84,7 +83,7 @@ func (this *ConceptRepo) ensureInit() {
 	if !this.init {
 		err := this.Load()
 		if err != nil {
-			log.Println("ERROR:", err)
+			this.config.GetLogger().Error("unable to load concept repository", "error", err)
 			debug.PrintStack()
 		}
 	}
@@ -178,7 +177,7 @@ func (this *ConceptRepo) registerFunction(f FunctionInfo) {
 	}
 	concept, ok := this.concepts[f.ConceptId]
 	if !ok {
-		log.Println("WARNING: unable to register function with unknown concept", f)
+		this.config.GetLogger().Warn("unable to register function with unknown concept", "function", f)
 		return
 	}
 	this.characteristicsOfFunction[f.Id] = concept.CharacteristicIds
@@ -244,9 +243,9 @@ func (this *ConceptRepo) resetToDefault() {
 }
 
 func (this *ConceptRepo) register(concept model.Concept, characteristics []model.Characteristic) {
-	log.Println("load concept", concept.Name, concept.Id)
+	this.config.GetLogger().Info("load concept", "concept", concept.Name, "conceptId", concept.Id)
 	for _, characteristic := range characteristics {
-		log.Println("    load characteristic", characteristic.Name, characteristic.Id)
+		this.config.GetLogger().Info("load characteristic", "concept", concept.Name, "conceptId", concept.Id, "characteristic", characteristic.Name, "characteristicId", characteristic.Id)
 		concept.CharacteristicIds = append(concept.CharacteristicIds, characteristic.Id)
 		this.characteristics[characteristic.Id] = characteristic
 		this.conceptByCharacteristic[characteristic.Id] = append(this.conceptByCharacteristic[characteristic.Id], concept)

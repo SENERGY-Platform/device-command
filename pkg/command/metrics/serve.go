@@ -17,11 +17,11 @@
 package metrics
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 )
 
 func (this *Metrics) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	log.Printf("%v [%v] %v \n", request.RemoteAddr, request.Method, request.URL)
+	slog.Info("metrics request", "method", request.Method, "url", request.URL, "remote_addr", request.RemoteAddr)
 	this.httphandler.ServeHTTP(writer, request)
 }

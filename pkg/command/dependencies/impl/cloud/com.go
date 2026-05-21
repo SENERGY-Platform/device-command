@@ -21,8 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"runtime/debug"
+	"log/slog"
 
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
@@ -71,8 +70,7 @@ func getLibListener(listener func(msg messages.ProtocolMsg) error) (result func(
 		message := messages.ProtocolMsg{}
 		err := json.Unmarshal([]byte(msg), &message)
 		if err != nil {
-			log.Println("ERROR:", err)
-			debug.PrintStack()
+			slog.Error("unable to unmarshal protocol message", "error", err, "msg", msg)
 			return nil //nil return to ensure continued consumption
 		}
 		return listener(message)
@@ -86,7 +84,7 @@ func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize 
 			for msg := range queue {
 				err := respHandler(msg)
 				if err != nil {
-					log.Println("ERROR: ", err)
+					slog.Error("unable to handle response", "error", err, "msg", msg)
 				}
 			}
 		}()

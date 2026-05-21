@@ -17,8 +17,12 @@
 package command
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"time"
+
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
@@ -26,9 +30,6 @@ import (
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/serialization"
 	"github.com/SENERGY-Platform/models/go/models"
-	"log"
-	"net/http"
-	"time"
 )
 
 func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspect model.AspectNode, timeout time.Duration) (code int, result interface{}) {
@@ -36,7 +37,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 	if err != nil {
 		return code, "unable to get event value: " + err.Error()
 	}
-	temp, err := this.marshaller.UnmarshalV2(marshaller.UnmarshallingV2Request{
+	req := marshaller.UnmarshallingV2Request{
 		Service:          service,
 		Protocol:         protocol,
 		CharacteristicId: characteristicId,
@@ -44,21 +45,10 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 		FunctionId:       functionId,
 		AspectNode:       aspect,
 		AspectNodeId:     aspect.Id,
-	})
+	}
+	temp, err := this.marshaller.UnmarshalV2(req)
 	if err != nil {
-		if this.config.Debug {
-			log.Println("ERROR:", err)
-			marshalRequestStr, _ := json.Marshal(marshaller.UnmarshallingV2Request{
-				Service:          service,
-				Protocol:         protocol,
-				CharacteristicId: characteristicId,
-				Message:          output,
-				FunctionId:       functionId,
-				AspectNode:       aspect,
-				AspectNodeId:     aspect.Id,
-			})
-			log.Println("ERROR: unmarshal request", string(marshalRequestStr))
-		}
+		this.config.GetLogger().Debug("unable to unmarshal event value", "error", err, "UnmarshallingV2Request", fmt.Sprintf("%#v", req))
 		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()
 	}
 	return 200, temp
@@ -95,7 +85,7 @@ func marshalSegmentValue(serializationTo string, value interface{}, rootName str
 	m, ok := serialization.Get(models.Serialization(serializationTo))
 	if !ok {
 		err := errors.New("unknown serialization")
-		log.Println("ERROR: unknown serialization", serializationTo)
+		slog.Error("unable to get serialization", "error", err, "serialization", serializationTo)
 		return "", err
 	}
 	return m.Marshal(value, marshallermodel.ContentVariable{Name: rootName})

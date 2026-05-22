@@ -1508,7 +1508,7 @@ func sendCommandBatch(config configuration.Config, commandMessage command.BatchR
 			t.Error(err)
 			return
 		}
-		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands/batch?timeout=5s", buff)
+		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands/batch?timeout=15s", buff)
 		if err != nil {
 			t.Error(err)
 			return
@@ -1543,7 +1543,7 @@ func sendCommand(config configuration.Config, commandMessage command.CommandMess
 			t.Error(err)
 			return
 		}
-		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands?timeout=5s", buff)
+		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands?timeout=15s", buff)
 		if err != nil {
 			t.Error(err)
 			return

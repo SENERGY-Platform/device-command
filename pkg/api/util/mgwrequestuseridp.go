@@ -91,7 +91,7 @@ func (this *MgwRequestUserIdpMiddleWare) GetUserId() (userId string, err error) 
 	if this.lastUserId != "" && time.Since(this.lastUserIdRequestTime) < 10*time.Minute {
 		return this.lastUserId, nil
 	}
-	network, err := this.client.NetworkInfo(context.Background(), "")
+	network, err := this.client.NetworkInfo(context.Background(), false, "")
 	if err != nil {
 		return "", err
 	}

@@ -4,11 +4,11 @@ go 1.26
 
 require (
 	github.com/IBM/sarama v1.43.3
-	github.com/SENERGY-Platform/converter v0.0.11
-	github.com/SENERGY-Platform/device-repository v0.2.53
-	github.com/SENERGY-Platform/external-task-worker v0.0.43
+	github.com/SENERGY-Platform/converter v0.0.12
+	github.com/SENERGY-Platform/device-repository v0.3.2
+	github.com/SENERGY-Platform/external-task-worker v0.0.44
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.8.0
-	github.com/SENERGY-Platform/marshaller v0.0.23
+	github.com/SENERGY-Platform/marshaller v0.0.24
 	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.4
 	github.com/SENERGY-Platform/models/go v0.0.0-20260710115411-5b8e00d6e038
 	github.com/SENERGY-Platform/service-commons v0.0.0-20260821114734-3e4578ac2358
@@ -30,10 +30,10 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
-	github.com/SENERGY-Platform/developer-notifications v0.0.5 // indirect
+	github.com/SENERGY-Platform/developer-notifications v0.0.6 // indirect
 	github.com/SENERGY-Platform/gin-middleware v0.14.1 // indirect
-	github.com/SENERGY-Platform/permissions-v2 v0.0.45 // indirect
-	github.com/SENERGY-Platform/process-incident-api v0.0.11 // indirect
+	github.com/SENERGY-Platform/permissions-v2 v0.0.47 // indirect
+	github.com/SENERGY-Platform/process-incident-api v0.0.12 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic v1.15.1 // indirect
@@ -94,7 +94,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
@@ -103,10 +103,10 @@ require (
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/go-archive v0.2.0 // indirect
-	github.com/moby/patternmatcher v0.6.0 // indirect
-	github.com/moby/sys/sequential v0.6.0 // indirect
-	github.com/moby/sys/user v0.4.0 // indirect
+	github.com/moby/go-archive v0.3.0 // indirect
+	github.com/moby/patternmatcher v0.6.1 // indirect
+	github.com/moby/sys/sequential v0.7.0 // indirect
+	github.com/moby/sys/user v0.4.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -172,7 +172,7 @@ require (
 	golang.org/x/tools v0.44.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/go-playground/colors.v1 v1.2.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

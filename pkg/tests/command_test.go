@@ -980,6 +980,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		MaxBytes:       int(config.KafkaConsumerMaxBytes),
 		MaxWait:        maxWait,
 		TopicConfigMap: config.KafkaTopicConfigs,
+		InitTopics:     true,
 	}, func(_ string, msg []byte, time time.Time) error {
 		t.Log("MESSAGE:", string(msg))
 		log.Println("MESSAGE:", string(msg))
@@ -1233,6 +1234,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			MaxBytes:       int(config.KafkaConsumerMaxBytes),
 			MaxWait:        maxWait,
 			TopicConfigMap: config.KafkaTopicConfigs,
+			InitTopics:     true,
 		}, func(_ string, msg []byte, time time.Time) error {
 			t.Log(string(msg))
 			message := messages.ProtocolMsg{}

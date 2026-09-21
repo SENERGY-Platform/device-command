@@ -38,8 +38,8 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/device-repository/lib/client"
-	devicerepomodel "github.com/SENERGY-Platform/device-repository/lib/model"
+	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
+	devicerepomodel "github.com/SENERGY-Platform/device-repository/v2/lib/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
@@ -1226,6 +1226,19 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 
 		serviceCallCount := map[string]int{}
 
+		metadataMux := sync.Mutex{}
+		lastMetadata := map[string]messages.Metadata{}
+		getLastMetadata := func(serviceId string) messages.Metadata {
+			metadataMux.Lock()
+			defer metadataMux.Unlock()
+			return lastMetadata[serviceId]
+		}
+		getServiceCallCount := func(serviceId string) int {
+			metadataMux.Lock()
+			defer metadataMux.Unlock()
+			return serviceCallCount[serviceId]
+		}
+
 		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
 			KafkaUrl:       config.KafkaUrl,
 			GroupId:        "test-connector-mock",
@@ -1243,6 +1256,9 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 				t.Error(err)
 				return nil
 			}
+			metadataMux.Lock()
+			lastMetadata[message.Metadata.Service.Id] = message.Metadata
+			metadataMux.Unlock()
 			switch message.Metadata.Service.Id {
 			case "urn:infai:ses:service:ec456e2a-81ed-4466-a119-daecfbb2d033":
 				message.Response.Output = map[string]string{"data": `{"value": "clear", "lastUpdate": 0, "lastUpdate_unit": "unit"}`}
@@ -1251,7 +1267,9 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 					t.Error(message.Request.Input)
 				}
 			case "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1":
+				metadataMux.Lock()
 				serviceCallCount[message.Metadata.Service.Id] = serviceCallCount[message.Metadata.Service.Id] + 1
+				metadataMux.Unlock()
 				message.Response.Output = map[string]string{"data": `{"value": 13, "lastUpdate": 42}`}
 			case "urn:infai:ses:service:4b6c4567-f256-4dbd-a562-d13442ad4530":
 				//create timeout
@@ -1499,6 +1517,100 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
 			AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
 		}, 200, "[13]"))
+
+		t.Run("device getTemperature with aspect list", sendCommand(config, command.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+			AspectIds:  []string{"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"},
+		}, 200, "[13]"))
+
+		t.Run("the protocol message names the aspect list and keeps the deprecated node", func(t *testing.T) {
+			metadata := getLastMetadata("urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1")
+			expected := "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"
+			if len(metadata.OutputAspectNodes) != 1 || metadata.OutputAspectNodes[0].Id != expected {
+				t.Error(metadata.OutputAspectNodes)
+			}
+			if metadata.OutputAspectNode == nil || metadata.OutputAspectNode.Id != expected {
+				t.Error(metadata.OutputAspectNode)
+			}
+		})
+
+		t.Run("device getTemperature with an aspect and its descendant", sendCommand(config, command.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+			AspectIds: []string{
+				"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+				"urn:infai:ses:aspect:outside_air",
+			},
+		}, 200, "[13]"))
+
+		t.Run("the protocol message reports the first aspect in the deprecated node", func(t *testing.T) {
+			metadata := getLastMetadata("urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1")
+			if len(metadata.OutputAspectNodes) != 2 {
+				t.Error(metadata.OutputAspectNodes)
+				return
+			}
+			//the alphabetically first id, the way the device-repository fills the deprecated field
+			if metadata.OutputAspectNode == nil || metadata.OutputAspectNode.Id != "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6" {
+				t.Error(metadata.OutputAspectNode)
+			}
+		})
+
+		t.Run("device group air getTemperature with aspect list", sendCommand(config, command.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			GroupId:    "group_temperature",
+			AspectIds:  []string{"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"},
+		}, 200, "[13,13,13]"))
+
+		t.Run("device group getTemperature with an aspect and its descendant", sendCommand(config, command.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			GroupId:    "group_temperature",
+			AspectIds: []string{
+				"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+				"urn:infai:ses:aspect:outside_air",
+			},
+		}, 200, "[13,13,13]"))
+
+		//every named aspect has to be served, so one unmatched aspect leaves no service
+		t.Run("device group getTemperature with one unmatched aspect", sendCommand(config, command.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			GroupId:    "group_temperature",
+			AspectIds: []string{
+				"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+				"urn:infai:ses:aspect:foo-aspect",
+			},
+		}, 200, "[]"))
+
+		//the deprecated field is folded into the list, so a command may use both
+		t.Run("device group getTemperature with a deprecated aspect beside the list", sendCommand(config, command.CommandMessage{
+			FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+			GroupId:    "group_temperature",
+			AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+			AspectIds:  []string{"urn:infai:ses:aspect:outside_air"},
+		}, 200, "[13,13,13]"))
+
+		t.Run("batch treats the deprecated aspect and a single element list as one command", func(t *testing.T) {
+			before := getServiceCallCount("urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1")
+			sendCommandBatch(config, command.BatchRequest{
+				{
+					FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+					DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+					ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+					AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+				},
+				{
+					FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+					DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+					ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+					AspectIds:  []string{"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"},
+				},
+			}, 200, `[{"status_code":200,"message":[13]},{"status_code":200,"message":[13]}]`)(t)
+			if calls := getServiceCallCount("urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1") - before; calls != 1 {
+				t.Error(calls)
+			}
+		})
 	}
 }
 

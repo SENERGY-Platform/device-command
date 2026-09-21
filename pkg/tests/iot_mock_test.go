@@ -28,10 +28,10 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/device-repository/lib/api"
-	"github.com/SENERGY-Platform/device-repository/lib/client"
-	repoconf "github.com/SENERGY-Platform/device-repository/lib/configuration"
-	"github.com/SENERGY-Platform/device-repository/lib/database"
+	"github.com/SENERGY-Platform/device-repository/v2/lib/api"
+	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
+	repoconf "github.com/SENERGY-Platform/device-repository/v2/lib/configuration"
+	"github.com/SENERGY-Platform/device-repository/v2/lib/database"
 	"github.com/SENERGY-Platform/models/go/models"
 	"github.com/SENERGY-Platform/service-commons/pkg/jwt"
 )

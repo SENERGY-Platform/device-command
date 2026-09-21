@@ -30,15 +30,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectId, input, timeout, preferEventValue, characteristicId)
+func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectIds, input, timeout, preferEventValue, characteristicId)
 	if code == http.StatusOK {
 		resp = []interface{}{resp}
 	}
 	return code, resp
 }
 
-func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
 	timeoutDuration := this.config.DefaultTimeoutDuration
 	var err error
 	if timeout != "" {
@@ -75,55 +75,45 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
 
-	var aspectNode *model.AspectNode
-	if aspectId != "" {
-		temp, err := this.iot.GetAspectNode(aspectId)
+	aspectNodes := []model.AspectNode{}
+	for _, aspectId := range aspectIds {
+		aspectNode, err := this.iot.GetAspectNode(aspectId)
 		if err != nil {
 			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error()
 		}
-		aspectNode = &temp
+		aspectNodes = append(aspectNodes, aspectNode)
 	}
 
 	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
-		aspect := model.AspectNode{}
-		if aspectNode != nil {
-			aspect = *aspectNode
-		}
-
 		this.metrics.LogGetLastEventValue(token.GetUserId(), device.Id, service.Id, functionId)
 
-		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, aspect, timeoutDuration)
+		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, aspectNodes, timeoutDuration)
 	}
 
 	var inputCharacteristicId string
 	var outputCharacteristicId string
 
-	var inputFunctionId string
 	var outputFunctionId string
-
-	var inputAspectNode *model.AspectNode
-	var outputAspectNode *model.AspectNode
+	var outputAspectNodes []model.AspectNode
 
 	data := []marshaller.MarshallingV2RequestData{}
 
 	if isControllingFunction(function) {
 		inputCharacteristicId = characteristicId
-		inputFunctionId = functionId
 		if input != nil {
 			data = []marshaller.MarshallingV2RequestData{
 				{
 					Value:            input,
 					CharacteristicId: inputCharacteristicId,
-					FunctionId:       inputFunctionId,
-					AspectNode:       inputAspectNode,
+					FunctionId:       functionId,
+					AspectNodes:      aspectNodes,
 				},
 			}
 		}
-		inputAspectNode = aspectNode
 	} else {
 		outputCharacteristicId = characteristicId
 		outputFunctionId = functionId
-		outputAspectNode = aspectNode
+		outputAspectNodes = aspectNodes
 	}
 
 	marshalledInput, err := this.marshaller.MarshalV2(service, protocol, data)
@@ -149,7 +139,6 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 			Service:              service,
 			Protocol:             protocol,
 			OutputFunctionId:     outputFunctionId,
-			OutputAspectNode:     outputAspectNode,
 			InputCharacteristic:  inputCharacteristicId,
 			OutputCharacteristic: outputCharacteristicId,
 			ResponseTo:           this.config.MetadataResponseTo,
@@ -157,6 +146,9 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		},
 		Trace: []messages.Trace{},
 	}
+
+	//keeps the deprecated single node filled, for a protocol handler that does not know the list yet
+	protocolMessage.Metadata.SetOutputAspectNodes(outputAspectNodes)
 
 	this.metrics.LogCommandSend(token.GetUserId(), device.Id, service.Id, functionId)
 

@@ -32,9 +32,9 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/mqtt"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/device-repository/lib/client"
-	"github.com/SENERGY-Platform/device-repository/lib/database"
-	devicerepomodel "github.com/SENERGY-Platform/device-repository/lib/model"
+	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
+	"github.com/SENERGY-Platform/device-repository/v2/lib/database"
+	devicerepomodel "github.com/SENERGY-Platform/device-repository/v2/lib/model"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/models/go/models"
 )
@@ -495,6 +495,39 @@ func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath s
 		AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
 	}, 200, "[13]"))
 
+	t.Run("device getTemperature with aspect list", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+		AspectIds:  []string{"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"},
+	}, 200, "[13]"))
+
+	t.Run("device getTemperature with an aspect and its descendant", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+		AspectIds: []string{
+			"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+			"urn:infai:ses:aspect:outside_air",
+		},
+	}, 200, "[13]"))
+
+	t.Run("device group air getTemperature with aspect list", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		GroupId:    "group_temperature",
+		AspectIds:  []string{"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"},
+	}, 200, "[13,13,13]"))
+
+	//every named aspect has to be served, so one unmatched aspect leaves no service
+	t.Run("device group getTemperature with one unmatched aspect", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		GroupId:    "group_temperature",
+		AspectIds: []string{
+			"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+			"urn:infai:ses:aspect:foo-aspect",
+		},
+	}, 200, "[]"))
+
 	t.Run("device event status", sendCommand(config, command.CommandMessage{
 		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 		DeviceId:   "status_event",
@@ -935,6 +968,39 @@ func TestMgwCommand(t *testing.T) {
 		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
 		AspectId:   "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
 	}, 200, "[13]"))
+
+	t.Run("device getTemperature with aspect list", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+		AspectIds:  []string{"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"},
+	}, 200, "[13]"))
+
+	t.Run("device getTemperature with an aspect and its descendant", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
+		AspectIds: []string{
+			"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+			"urn:infai:ses:aspect:outside_air",
+		},
+	}, 200, "[13]"))
+
+	t.Run("device group air getTemperature with aspect list", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		GroupId:    "group_temperature",
+		AspectIds:  []string{"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6"},
+	}, 200, "[13,13,13]"))
+
+	//every named aspect has to be served, so one unmatched aspect leaves no service
+	t.Run("device group getTemperature with one unmatched aspect", sendCommand(config, command.CommandMessage{
+		FunctionId: "urn:infai:ses:measuring-function:f2769eb9-b6ad-4f7e-bd28-e4ea043d2f8b",
+		GroupId:    "group_temperature",
+		AspectIds: []string{
+			"urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6",
+			"urn:infai:ses:aspect:foo-aspect",
+		},
+	}, 200, "[]"))
 
 	t.Run("device event status", sendCommand(config, command.CommandMessage{
 		FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",

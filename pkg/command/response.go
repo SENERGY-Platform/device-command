@@ -25,10 +25,6 @@ import (
 
 func (this *Command) HandleTaskResponse(message messages.ProtocolMsg) (err error) {
 	var output interface{}
-	aspect := model.AspectNode{}
-	if message.Metadata.OutputAspectNode != nil {
-		aspect = *message.Metadata.OutputAspectNode
-	}
 	if message.Metadata.OutputCharacteristic != model.NullCharacteristic.Id && message.Metadata.OutputCharacteristic != "" {
 		output, err = this.marshaller.UnmarshalV2(marshaller.UnmarshallingV2Request{
 			Service:          message.Metadata.Service,
@@ -36,8 +32,7 @@ func (this *Command) HandleTaskResponse(message messages.ProtocolMsg) (err error
 			CharacteristicId: message.Metadata.OutputCharacteristic,
 			Message:          message.Response.Output,
 			FunctionId:       message.Metadata.OutputFunctionId,
-			AspectNode:       aspect,
-			AspectNodeId:     aspect.Id,
+			AspectNodes:      message.Metadata.GetOutputAspectNodes(),
 		})
 		if err != nil {
 			this.register.Complete(message.TaskInfo.TaskId, http.StatusInternalServerError, err.Error())

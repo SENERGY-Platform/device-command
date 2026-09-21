@@ -25,8 +25,9 @@ import (
 )
 
 type CommandMessage struct {
-	FunctionId string      `json:"function_id"`         //mandatory
-	AspectId   string      `json:"aspect_id,omitempty"` //optional
+	FunctionId string      `json:"function_id"`          //mandatory
+	AspectId   string      `json:"aspect_id,omitempty"`  //optional; deprecated: please use AspectIds
+	AspectIds  []string    `json:"aspect_ids,omitempty"` //optional
 	Input      interface{} `json:"input"`
 
 	//device command

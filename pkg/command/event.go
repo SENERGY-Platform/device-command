@@ -32,7 +32,7 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 )
 
-func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspect model.AspectNode, timeout time.Duration) (code int, result interface{}) {
+func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspectNodes []model.AspectNode, timeout time.Duration) (code int, result interface{}) {
 	output, err, code := this.getLastEventMessage(token, device, service, protocol, timeout)
 	if err != nil {
 		return code, "unable to get event value: " + err.Error()
@@ -43,8 +43,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 		CharacteristicId: characteristicId,
 		Message:          output,
 		FunctionId:       functionId,
-		AspectNode:       aspect,
-		AspectNodeId:     aspect.Id,
+		AspectNodes:      aspectNodes,
 	}
 	temp, err := this.marshaller.UnmarshalV2(req)
 	if err != nil {

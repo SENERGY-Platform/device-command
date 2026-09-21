@@ -142,19 +142,16 @@ func (this *Marshaller) UnmarshalV2(request marshaller.UnmarshallingV2Request) (
 	if err != nil {
 		return result, err
 	}
-	var mockAspect *marshaller_service_model.AspectNode
-	if request.AspectNode.Id != "" {
-		mockAspect = &marshaller_service_model.AspectNode{}
-		err = jsonCast(request.AspectNode, mockAspect)
-		if err != nil {
-			debug.PrintStack()
-			return result, err
-		}
+	mockAspects := []marshaller_service_model.AspectNode{}
+	err = jsonCast(request.GetAspectNodes(), &mockAspects)
+	if err != nil {
+		debug.PrintStack()
+		return result, err
 	}
 	if request.Path == "" {
-		paths := this.v2.GetOutputPaths(mockService, request.FunctionId, mockAspect)
+		paths := this.v2.GetOutputPaths(mockService, request.FunctionId, mockAspects)
 		if len(paths) > 1 {
-			slog.Warn("only first path found by FunctionId and AspectNode is used for Unmarshal", "paths", fmt.Sprintf("%#v", paths))
+			slog.Warn("only first path found by FunctionId and AspectNodes is used for Unmarshal", "paths", fmt.Sprintf("%#v", paths))
 		}
 		if len(paths) == 0 {
 			return result, errors.New("no output path found for criteria")

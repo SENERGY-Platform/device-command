@@ -30,6 +30,7 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 	if len(batch) == 0 {
 		return []BatchResultElement{}
 	}
+	batch.SetAspectIds()
 	result := make([]BatchResultElement, len(batch))
 	wg := sync.WaitGroup{}
 	mux := sync.Mutex{}
@@ -53,9 +54,9 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 				var code int
 				var temp interface{}
 				if cmd.DeviceId != "" && cmd.ServiceId != "" {
-					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
+					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectIds, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				} else if cmd.GroupId != "" {
-					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
+					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectIds, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				}
 				if code != http.StatusOK {
 					this.config.GetLogger().Warn("error batch response element", "user", token.GetUserId(), "code", code, "response", fmt.Sprintf("%#v", result))
@@ -93,14 +94,17 @@ func (this *Command) expectedEventRequests(token auth.Token, batch []CommandMess
 					return count, err
 				}
 				var aspectError error
-				if cmd.AspectId != "" {
-					_, aspectError = this.iot.GetAspectNode(cmd.AspectId)
+				for _, aspectId := range cmd.GetAspectIds() {
+					_, aspectError = this.iot.GetAspectNode(aspectId)
+					if aspectError != nil {
+						break
+					}
 				}
 				if aspectError == nil && isMeasuringFunctionId(cmd.FunctionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
 					count = count + 1
 				}
 			} else if cmd.GroupId != "" {
-				subTasks, err := this.GetSubTasks(token.Jwt(), cmd.GroupId, cmd.FunctionId, cmd.AspectId, cmd.DeviceClassId, cmd.Input)
+				subTasks, err := this.GetSubTasks(token.Jwt(), cmd.GroupId, cmd.FunctionId, cmd.GetAspectIds(), cmd.DeviceClassId, cmd.Input)
 				if err != nil {
 					return count, err
 				}

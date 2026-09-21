@@ -24,10 +24,11 @@ import (
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 )
 
-func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectId string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
-	subTasks, err := this.GetSubTasks(token.Jwt(), groupId, functionId, aspectId, deviceClassId, input)
+func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+	subTasks, err := this.GetSubTasks(token.Jwt(), groupId, functionId, aspectIds, deviceClassId, input)
 	if err != nil {
 		return http.StatusInternalServerError, err.Error()
 	}
@@ -39,7 +40,7 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 		wg.Add(1)
 		go func(sub SubCommand) {
 			defer wg.Done()
-			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectId, input, timeout, preferEventValue, characteristicId)
+			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectIds, input, timeout, preferEventValue, characteristicId)
 			this.config.GetLogger().Debug("group sub result", "user", token.GetUserId(), "code", tempCode, "result", fmt.Sprintf("%#v", temp))
 			if tempCode == http.StatusOK {
 				results = append(results, temp)
@@ -58,13 +59,13 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 
 type SubCommand struct {
 	FunctionId string `json:"function_id"` //mandatory
-	AspectId   string
+	AspectIds  []string
 	Input      interface{} `json:"input"`
 	DeviceId   string      `json:"device_id,omitempty"`
 	ServiceId  string      `json:"service_id,omitempty"`
 }
 
-func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId string, aspectId string, deviceClassId string, input interface{}) (result []SubCommand, err error) {
+func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}) (result []SubCommand, err error) {
 	group, err := this.iot.GetDeviceGroup(token, deviceGroupId)
 	if err != nil {
 		return nil, err
@@ -80,25 +81,25 @@ func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId 
 			return nil, err
 		}
 
-		aspect := model.AspectNode{}
-		if aspectId != "" {
-			aspect, err = this.iot.GetAspectNode(aspectId)
+		aspectNodes := []model.AspectNode{}
+		for _, aspectId := range aspectIds {
+			aspectNode, err := this.iot.GetAspectNode(aspectId)
 			if err != nil {
 				this.config.GetLogger().Warn("unable to find aspect node, use aspect node without descendants", "aspect_id", aspectId, "error", err)
-				aspect.Id = aspectId
-				err = nil
+				aspectNode = model.AspectNode{Id: aspectId}
 			}
+			aspectNodes = append(aspectNodes, aspectNode)
 		}
 
 		if deviceClassId == "" || deviceClassId == deviceType.DeviceClassId {
-			services := this.getFilteredServices(functionId, aspect, deviceType.Services)
+			services := this.getFilteredServices(functionId, aspectNodes, deviceType.Services)
 			for _, service := range services {
 				result = append(result, SubCommand{
 					FunctionId: functionId,
 					Input:      input,
 					DeviceId:   device.Id,
 					ServiceId:  service.Id,
-					AspectId:   aspectId,
+					AspectIds:  aspectIds,
 				})
 			}
 		}
@@ -106,14 +107,14 @@ func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId 
 	return result, nil
 }
 
-func (this *Command) getFilteredServices(functionId string, aspect model.AspectNode, services []model.Service) (result []model.Service) {
+func (this *Command) getFilteredServices(functionId string, aspectNodes []model.AspectNode, services []model.Service) (result []model.Service) {
 	serviceIndex := map[string]model.Service{}
 	for _, service := range services {
 		contents := service.Inputs
 		if isMeasuringFunctionId(functionId) {
 			contents = service.Outputs
 		}
-		matchesCriteria := anyContentMatchesCriteria(contents, model.DeviceGroupFilterCriteria{FunctionId: functionId, AspectId: aspect.Id}, aspect)
+		matchesCriteria := anyContentMatchesCriteria(contents, functionId, aspectNodes)
 		if matchesCriteria {
 			serviceIndex[service.Id] = service
 		}
@@ -127,33 +128,26 @@ func (this *Command) getFilteredServices(functionId string, aspect model.AspectN
 	return result
 }
 
-func anyContentMatchesCriteria(contents []model.Content, criteria model.DeviceGroupFilterCriteria, aspectNode model.AspectNode) bool {
+func anyContentMatchesCriteria(contents []model.Content, functionId string, aspectNodes []model.AspectNode) bool {
 	for _, content := range contents {
-		if contentVariableContainsCriteria(content.ContentVariable, criteria, aspectNode) {
+		if contentVariableContainsCriteria(content.ContentVariable, functionId, aspectNodes) {
 			return true
 		}
 	}
 	return false
 }
 
-func contentVariableContainsCriteria(variable model.ContentVariable, criteria model.DeviceGroupFilterCriteria, aspectNode model.AspectNode) bool {
-	if variable.FunctionId == criteria.FunctionId &&
-		(criteria.AspectId == "" ||
-			variable.AspectId == criteria.AspectId ||
-			listContains(aspectNode.DescendentIds, variable.AspectId)) {
+// contentVariableContainsCriteria reports whether a content variable serves the function and
+// the aspects of the command. Every requested aspect has to be matched, by the aspect itself
+// or by one of its descendants, the way the device-repository reads a filter-criteria that
+// names several aspects; without a requested aspect the function alone decides.
+func contentVariableContainsCriteria(variable model.ContentVariable, functionId string, aspectNodes []model.AspectNode) bool {
+	if variable.FunctionId == functionId &&
+		marshallermodel.AspectMatchLevel(marshallermodel.ContentVariableAspectIds(variable), aspectNodes) >= 0 {
 		return true
 	}
 	for _, sub := range variable.SubContentVariables {
-		if contentVariableContainsCriteria(sub, criteria, aspectNode) {
-			return true
-		}
-	}
-	return false
-}
-
-func listContains(list []string, search string) bool {
-	for _, element := range list {
-		if element == search {
+		if contentVariableContainsCriteria(sub, functionId, aspectNodes) {
 			return true
 		}
 	}

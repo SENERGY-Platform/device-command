@@ -26,15 +26,10 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
 	"github.com/SENERGY-Platform/service-commons/pkg/cache"
-	"github.com/SENERGY-Platform/service-commons/pkg/cache/fallback"
 )
 
 func IotFactory(ctx context.Context, config configuration.Config) (result interfaces.Iot, err error) {
-	cacheConfig := cloud.GetCacheConfig()
-	if config.UseIotFallback && config.IotFallbackFile != "" && config.IotFallbackFile != "-" {
-		cacheConfig.FallbackProvider = fallback.NewProvider(config.IotFallbackFile)
-	}
-	c, err := cache.New(cacheConfig)
+	c, err := cache.New(cloud.GetCacheConfig())
 	if err != nil {
 		return result, err
 	}

@@ -47,7 +47,7 @@ func New(ctx context.Context, config configuration.Config) (cmd *Command, err er
 		com = mgw.ComFactory
 	}
 	iot := cloud.IotFactory
-	if config.UseIotFallback {
+	if config.IotImpl == "mgw" {
 		iot = mgw.IotFactory
 	}
 	m := cloud.MarshallerFactory

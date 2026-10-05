@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -41,16 +40,10 @@ import (
 
 func TestMgwCommandWithTimeoutAuth(t *testing.T) {
 	t.Skip("not working in github environment")
-	fallbackPath := filepath.Join(t.TempDir(), "iot_fallback.json")
-	t.Run("good auth", func(t *testing.T) {
-		testMgwCommandWithTimeoutAuth(t, false, fallbackPath)
-	})
-	t.Run("bad auth", func(t *testing.T) {
-		testMgwCommandWithTimeoutAuth(t, true, fallbackPath)
-	})
+	testMgwCommandWithTimeoutAuth(t)
 }
 
-func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath string) {
+func testMgwCommandWithTimeoutAuth(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -64,10 +57,8 @@ func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath s
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
-	config.UseIotFallback = true
+	config.IotImpl = "mgw"
 	config.TimescaleImpl = "mgw"
-	config.IotFallbackFile = fallbackPath
-	config.UseIotFallback = true
 	config.AsyncCacheRefresh = true
 	config.RequestUserIdp = "user:mgw-fallback-token"
 	config.AuthClientId = "test"
@@ -99,167 +90,161 @@ func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath s
 		return
 	}
 
-	if badBackend {
-		config.DeviceRepositoryUrl = "http://localhost:2" //port 2 is "De-assigned on 2025-02-13, previously compressnet" and should not be in use
+	var c client.Interface
+	var db database.Database
+	config, c, db, err = iotEnv(config, ctx, wg, export1)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
-	if !badBackend {
-		var c client.Interface
-		var db database.Database
-		config, c, db, err = iotEnv(config, ctx, wg, export1)
+	protocols := []model.Protocol{}
+	for _, p := range protocols {
+		err = db.SetProtocol(ctx, p, NilCallback)
 		if err != nil {
 			t.Error(err)
 			return
 		}
+	}
 
-		protocols := []model.Protocol{}
-		for _, p := range protocols {
-			err = db.SetProtocol(ctx, p, NilCallback)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+	deviceClasses := []model.DeviceClass{}
+	for _, dc := range deviceClasses {
+		err = db.SetDeviceClass(ctx, dc, NilCallback)
+		if err != nil {
+			t.Error(err)
+			return
 		}
+	}
 
-		deviceClasses := []model.DeviceClass{}
-		for _, dc := range deviceClasses {
-			err = db.SetDeviceClass(ctx, dc, NilCallback)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+	characteristics := []model.Characteristic{}
+	for _, characteristic := range characteristics {
+		err = db.SetCharacteristic(ctx, characteristic, NilCallback)
+		if err != nil {
+			t.Error(err)
+			return
 		}
+	}
 
-		characteristics := []model.Characteristic{}
-		for _, characteristic := range characteristics {
-			err = db.SetCharacteristic(ctx, characteristic, NilCallback)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+	concepts := []model.Concept{}
+	for _, concept := range concepts {
+		err = db.SetConcept(ctx, concept, NilCallback)
+		if err != nil {
+			t.Error(err)
+			return
 		}
+	}
 
-		concepts := []model.Concept{}
-		for _, concept := range concepts {
-			err = db.SetConcept(ctx, concept, NilCallback)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+	functions := []model.Function{}
+
+	for _, f := range functions {
+		err = db.SetFunction(ctx, f, NilCallback)
+		if err != nil {
+			t.Error(err)
+			return
 		}
+	}
 
-		functions := []model.Function{}
-
-		for _, f := range functions {
-			err = db.SetFunction(ctx, f, NilCallback)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+	deviceTypes := []model.DeviceType{}
+	for _, dt := range deviceTypes {
+		err = db.SetDeviceType(ctx, dt, NilCallback)
+		if err != nil {
+			t.Error(err)
+			return
 		}
+	}
 
-		deviceTypes := []model.DeviceType{}
-		for _, dt := range deviceTypes {
-			err = db.SetDeviceType(ctx, dt, NilCallback)
-			if err != nil {
-				t.Error(err)
-				return
-			}
-		}
+	devices := []model.Device{
+		{
+			Id:           "status_event",
+			LocalId:      "status_event_lid",
+			Name:         "status_event",
+			DeviceTypeId: "urn:infai:ses:device-type:status_event",
+		},
+		{
+			Id:           "urn:infai:ses:device:timestamp-test",
+			LocalId:      "d1-timestamp",
+			Name:         "d1Name-timestamp",
+			DeviceTypeId: "urn:infai:ses:device-type:24b294e8-4676-4782-8dc9-a008c0d94770",
+		},
+		{
+			Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
+			LocalId:      "d1",
+			Name:         "d1Name",
+			DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+		},
+		{
+			Id:           "temperature2",
+			LocalId:      "d1",
+			Name:         "d1Name",
+			DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+		},
+		{
+			Id:           "temperature3",
+			LocalId:      "d1",
+			Name:         "d1Name",
+			DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
+		},
+		{
+			Id:           "lamp",
+			LocalId:      "lamp",
+			Name:         "lamp",
+			DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+		},
+		{
+			Id:           "lamp2",
+			LocalId:      "lamp2",
+			Name:         "lamp2",
+			DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
+		},
+		{
+			Id:           "color_event",
+			LocalId:      "color_event_lid",
+			Name:         "color_event",
+			DeviceTypeId: "urn:infai:ses:device-type:color_event",
+		},
+	}
 
-		devices := []model.Device{
-			{
-				Id:           "status_event",
-				LocalId:      "status_event_lid",
-				Name:         "status_event",
-				DeviceTypeId: "urn:infai:ses:device-type:status_event",
-			},
-			{
-				Id:           "urn:infai:ses:device:timestamp-test",
-				LocalId:      "d1-timestamp",
-				Name:         "d1Name-timestamp",
-				DeviceTypeId: "urn:infai:ses:device-type:24b294e8-4676-4782-8dc9-a008c0d94770",
-			},
-			{
-				Id:           "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
-				LocalId:      "d1",
-				Name:         "d1Name",
-				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-			},
-			{
-				Id:           "temperature2",
-				LocalId:      "d1",
-				Name:         "d1Name",
-				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-			},
-			{
-				Id:           "temperature3",
-				LocalId:      "d1",
-				Name:         "d1Name",
-				DeviceTypeId: "urn:infai:ses:device-type:755d892f-ec47-40ce-926a-59201328c138",
-			},
-			{
-				Id:           "lamp",
-				LocalId:      "lamp",
-				Name:         "lamp",
-				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
-			},
-			{
-				Id:           "lamp2",
-				LocalId:      "lamp2",
-				Name:         "lamp2",
-				DeviceTypeId: "urn:infai:ses:device-type:eb4a3337-01a1-4434-9dcc-064b3955eeef",
-			},
-			{
-				Id:           "color_event",
-				LocalId:      "color_event_lid",
-				Name:         "color_event",
-				DeviceTypeId: "urn:infai:ses:device-type:color_event",
-			},
-		}
-
-		for _, device := range devices {
-			err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
-				Device: device,
-			}, func(old devicerepomodel.DeviceWithConnectionState, new devicerepomodel.DeviceWithConnectionState) error {
-				_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "devices", new.Id, client.ResourcePermissions{
-					UserPermissions: map[string]client.PermissionsMap{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
-				})
-				if err != nil {
-					t.Error(err)
-				}
-				return err
+	for _, device := range devices {
+		err = db.SetDevice(ctx, devicerepomodel.DeviceWithConnectionState{
+			Device: device,
+		}, func(old devicerepomodel.DeviceWithConnectionState, new devicerepomodel.DeviceWithConnectionState) error {
+			_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "devices", new.Id, client.ResourcePermissions{
+				UserPermissions: map[string]client.PermissionsMap{"testOwner": {Read: true, Write: true, Execute: true, Administrate: true}},
 			})
 			if err != nil {
 				t.Error(err)
-				return
 			}
+			return err
+		})
+		if err != nil {
+			t.Error(err)
+			return
 		}
+	}
 
-		deviceGroups := []model.DeviceGroup{
-			{
-				Id:        "group_temperature",
-				DeviceIds: []string{"urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866", "temperature2", "temperature3"},
-			},
-			{
-				Id:        "group_color",
-				DeviceIds: []string{"color_event", "lamp", "lamp2"},
-			},
-		}
-		for _, dg := range deviceGroups {
-			err = db.SetDeviceGroup(ctx, dg, func(dg models.DeviceGroup, user string) error {
-				_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "device-groups", dg.Id, client.ResourcePermissions{
-					UserPermissions: map[string]client.PermissionsMap{user: {Read: true, Write: true, Execute: true, Administrate: true}},
-				})
-				if err != nil {
-					t.Error(err)
-				}
-				return err
-			}, "testOwner")
+	deviceGroups := []model.DeviceGroup{
+		{
+			Id:        "group_temperature",
+			DeviceIds: []string{"urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866", "temperature2", "temperature3"},
+		},
+		{
+			Id:        "group_color",
+			DeviceIds: []string{"color_event", "lamp", "lamp2"},
+		},
+	}
+	for _, dg := range deviceGroups {
+		err = db.SetDeviceGroup(ctx, dg, func(dg models.DeviceGroup, user string) error {
+			_, err, _ = c.GetPermissionsClient().SetPermission(client.InternalAdminToken, "device-groups", dg.Id, client.ResourcePermissions{
+				UserPermissions: map[string]client.PermissionsMap{user: {Read: true, Write: true, Execute: true, Administrate: true}},
+			})
 			if err != nil {
 				t.Error(err)
-				return
 			}
+			return err
+		}, "testOwner")
+		if err != nil {
+			t.Error(err)
+			return
 		}
 	}
 
@@ -413,9 +398,6 @@ func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath s
 	}, 200, "[13,13,13]"))
 
 	expectedDeviceBatchResponse := `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: unexpected statuscode 404: not found\n"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]}]`
-	if badBackend {
-		expectedDeviceBatchResponse = `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: Get \"http://localhost:2/functions/foobar\": dial tcp 127.0.0.1:2: connect: connection refused"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]}]`
-	}
 	t.Run("device batch", sendCommandBatch(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
@@ -536,7 +518,6 @@ func testMgwCommandWithTimeoutAuth(t *testing.T, badBackend bool, fallbackPath s
 }
 
 func TestMgwCommand(t *testing.T) {
-	fallbackPath := filepath.Join(t.TempDir(), "iot_fallback.json")
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -549,9 +530,8 @@ func TestMgwCommand(t *testing.T) {
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
-	config.UseIotFallback = true
+	config.IotImpl = "mgw"
 	config.TimescaleImpl = "mgw"
-	config.IotFallbackFile = fallbackPath
 	config.AsyncCacheRefresh = false
 
 	config.ServerPort, err = GetFreePort()
@@ -853,7 +833,7 @@ func TestMgwCommand(t *testing.T) {
 		FunctionId: "foobar",
 		DeviceId:   "urn:infai:ses:device:a486084b-3323-4cbc-9f6b-d797373ae866",
 		ServiceId:  "urn:infai:ses:service:6d6067a3-ed4e-45ec-a7eb-b1695340d2f1",
-	}, 500, `"unable to load function: value not found in fallback: function.foobar"`))
+	}, 500, `"unable to load function: unexpected statuscode 404: not found\n"`))
 
 	t.Run("device color", sendCommand(config, command.CommandMessage{
 		FunctionId: "urn:infai:ses:controlling-function:c54e2a89-1fb8-4ecb-8993-a7b40b355599",
@@ -932,7 +912,7 @@ func TestMgwCommand(t *testing.T) {
 			DeviceId:   "color_event",
 			ServiceId:  "urn:infai:ses:service:color_event",
 		},
-	}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: value not found in fallback: function.foobar"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]}]`))
+	}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: unexpected statuscode 404: not found\n"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]}]`))
 
 	zeroTimestamp := time.UnixMilli(0).Format(time.RFC3339)
 
@@ -1022,9 +1002,8 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
-	config.UseIotFallback = true
+	config.IotImpl = "mgw"
 	config.TimescaleImpl = "mgw"
-	config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
 
 	config.ServerPort, err = GetFreePort()
 	if err != nil {
@@ -1256,9 +1235,8 @@ func TestShellyError(t *testing.T) {
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
-	config.UseIotFallback = true
+	config.IotImpl = "mgw"
 	config.TimescaleImpl = "mgw"
-	config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
 
 	config.ServerPort, err = GetFreePort()
 	if err != nil {
@@ -1490,9 +1468,8 @@ func TestCharacteristicError(t *testing.T) {
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
-	config.UseIotFallback = true
+	config.IotImpl = "mgw"
 	config.TimescaleImpl = "mgw"
-	config.IotFallbackFile = filepath.Join(t.TempDir(), "iot_fallback.json")
 
 	config.ServerPort, err = GetFreePort()
 	if err != nil {

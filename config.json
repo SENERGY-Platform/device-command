@@ -17,7 +17,7 @@
 
     "com_impl": "cloud",
     "marshaller_impl": "cloud",
-    "use_iot_fallback": false,
+    "iot_impl": "cloud",
     "timescale_impl": "cloud",
 
     "timescale_wrapper_url": "http://timescale-wrapper.timescale:8080",
@@ -35,8 +35,6 @@
     "mgw_correlation_id_prefix": "device-command-",
     "mgw_protocol_segment": "data",
     "mgw_mqtt_client_id": "device-command",
-
-    "iot_fallback_file": "devicerepo_fallback.json",
 
     "default_timeout":"30s",
 

@@ -3,7 +3,6 @@
     "log_level": "info",
     "server_port":"8080",
 
-    "async_cache_refresh": false,
     "cache_expiration": "60s",
     "cache_invalidation_all_kafka_topics": ["device-types", "protocols", "concepts", "characteristics", "functions", "aspects"],
     "device_kafka_topic": "devices",
@@ -28,7 +27,6 @@
     "mgw_mqtt_user": "",
     "mgw_mqtt_pw": "",
 
-    "response_worker_count":20,
     "marshaller_url":"http://marshaller:8080",
     "device_repository_url":"http://device-repository:8080",
 

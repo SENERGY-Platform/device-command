@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package command
+package devicerepo
 
 import (
 	"context"
@@ -25,7 +25,9 @@ import (
 	"github.com/SENERGY-Platform/service-commons/pkg/kafka"
 )
 
-func StartKafkaCacheInvalidator(ctx context.Context, config configuration.Config) (err error) {
+// startCacheInvalidator drops cached entries when the repository announces a change on kafka.
+// Without kafka, as on a gateway, entries live until they expire.
+func startCacheInvalidator(ctx context.Context, config configuration.Config) error {
 	if config.KafkaUrl == "" || config.KafkaUrl == "-" {
 		return nil
 	}
@@ -40,19 +42,13 @@ func StartKafkaCacheInvalidator(ctx context.Context, config configuration.Config
 		InitTopic: config.InitTopics,
 	}
 	if len(config.CacheInvalidationAllKafkaTopics) > 0 {
-		err = invalidator.StartCacheInvalidatorAll(ctx, kafkaConf, config.CacheInvalidationAllKafkaTopics, nil)
+		err := invalidator.StartCacheInvalidatorAll(ctx, kafkaConf, config.CacheInvalidationAllKafkaTopics, nil)
 		if err != nil {
 			return err
 		}
 	}
-
-	err = invalidator.StartKnownCacheInvalidators(ctx, kafkaConf, invalidator.KnownTopics{
+	return invalidator.StartKnownCacheInvalidators(ctx, kafkaConf, invalidator.KnownTopics{
 		DeviceTopic:      config.DeviceKafkaTopic,
 		DeviceGroupTopic: config.DeviceGroupKafkaTopic,
 	}, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

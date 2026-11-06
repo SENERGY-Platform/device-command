@@ -36,11 +36,9 @@ import (
 type Config struct {
 	ServerPort          string `json:"server_port"`
 	Debug               bool   `json:"debug"`
-	ResponseWorkerCount int64  `json:"response_worker_count"`
 	MarshallerUrl       string `json:"marshaller_url"`
 	DeviceRepositoryUrl string `json:"device_repository_url"`
 
-	AsyncCacheRefresh               bool     `json:"async_cache_refresh"`
 	CacheExpiration                 string   `json:"cache_expiration"`
 	CacheInvalidationAllKafkaTopics []string `json:"cache_invalidation_all_kafka_topics"`
 	DeviceKafkaTopic                string   `json:"device_kafka_topic"`

@@ -64,8 +64,11 @@ field of a path option. That is a silent narrowing for such a reader: it sees
 one node out of several, chosen by how the urns sort rather than by which aspect
 matters.
 
-`HandleTaskResponse` reads the answer back with `GetOutputAspectNodes()`, so a
-response to a command that was sent before the lists existed still unmarshals.
+The reply is unmarshalled by the request that waits for it, with the aspect
+nodes it sent. The metadata a connector echoes back is not read, so a connector
+that returns only the deprecated node does not narrow the unmarshal.
+`GetOutputAspectNodes()` stays on `messages.Metadata` for other readers of the
+message.
 
 ## Device group filtering
 

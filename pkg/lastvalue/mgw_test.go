@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,30 @@
  * limitations under the License.
  */
 
-package interfaces
+package lastvalue
 
 import (
-	"context"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/device-command/pkg/messages"
+	"testing"
 )
 
-type Producer interface {
-	SendCommand(msg messages.ProtocolMsg) (err error)
-}
+func TestNewMgw(t *testing.T) {
+	obj, err := NewMgw("foobar", "data")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if obj.url != "http://foobar:8080" {
+		t.Error(obj.url)
+		return
+	}
 
-type ComFactory func(ctx context.Context, config configuration.Config, responseListener func(msg messages.ProtocolMsg) error, errorListener func(msg messages.ProtocolMsg) error) (producer Producer, err error)
+	obj, err = NewMgw("https://foobar:80", "data")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if obj.url != "https://foobar:80" {
+		t.Error(obj.url)
+		return
+	}
+}

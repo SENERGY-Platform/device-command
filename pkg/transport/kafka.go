@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package cloud
+package transport
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -28,37 +27,47 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/messages"
 	"github.com/SENERGY-Platform/service-commons/pkg/kafka"
 )
 
-// a response that is older than this has no request waiting for it any more; it is skipped
-// unread, so that a consumer that starts behind does not unmarshal a backlog for nobody
-const maxResponseAge = time.Hour
+// a reply that is older than this has no request waiting for it any more; it is skipped unread,
+// so that a consumer that starts behind does not work through a backlog for nobody
+const maxReplyAge = time.Hour
 
-func ComFactory(ctx context.Context, config configuration.Config, responseListener func(msg messages.ProtocolMsg) error, errorListener func(msg messages.ProtocolMsg) error) (producer interfaces.Producer, err error) {
+// Kafka sends a command to the topic named by the handler of its protocol, or by http POST if the
+// handler is an http(s) url. Replies arrive on the response and error topics of this instance.
+//
+// The automation-engine sends to the same connectors. Its replies stay apart as long as response
+// and error topics are not shared: on a shared topic a shared consumer group would split the
+// replies between both services, and each would lose the ones the other read. Within the own
+// topics a reply is matched by its task id only.
+type Kafka struct {
+	ctx         context.Context
+	config      configuration.Config
+	mux         sync.Mutex
+	writers     map[string]*kafka.Producer
+	knownTopics map[string]bool
+}
+
+func NewKafka(ctx context.Context, config configuration.Config, receive func(Reply)) (*Kafka, error) {
 	if !isSet(config.KafkaUrl) {
-		return nil, errors.New("missing kafka_url: the cloud com_impl receives responses only over kafka")
-	}
-	resp := getListener(responseListener)
-	if config.ResponseWorkerCount > 1 {
-		resp = getQueuedResponseHandler(ctx, config.ResponseWorkerCount, config.ResponseWorkerCount, resp)
+		return nil, errors.New("missing kafka_url: the cloud com_impl receives replies only over kafka")
 	}
 	if isSet(config.ResponseTopic) {
-		err = startConsumer(ctx, config, config.ResponseTopic, resp)
+		err := consume(ctx, config, config.ResponseTopic, false, receive)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if isSet(config.ErrorTopic) && !isHttpHandler(config.ErrorTopic) {
-		err = startConsumer(ctx, config, config.ErrorTopic, getListener(errorListener))
+		err := consume(ctx, config, config.ErrorTopic, true, receive)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &Producer{
+	return &Kafka{
 		ctx:         ctx,
 		config:      config,
 		writers:     map[string]*kafka.Producer{},
@@ -66,7 +75,9 @@ func ComFactory(ctx context.Context, config configuration.Config, responseListen
 	}, nil
 }
 
-func startConsumer(ctx context.Context, config configuration.Config, topic string, listener func(msg []byte) error) error {
+// consume never fails on a message: one that cannot be read is logged and skipped, as the consumer
+// would otherwise retry it and hold back every reply behind it.
+func consume(ctx context.Context, config configuration.Config, topic string, failed bool, receive func(Reply)) error {
 	slog.Info("consume topic", "topic", topic)
 	if config.InitTopics {
 		err := initTopics(config.KafkaUrl, config.KafkaTopicConfigs, 1, 1, topic)
@@ -80,25 +91,22 @@ func startConsumer(ctx context.Context, config configuration.Config, topic strin
 		ConsumerGroup: config.KafkaConsumerGroup,
 		StartOffset:   kafka.FirstOffset,
 	}, []string{topic}, func(delivery kafka.Message) error {
-		if age := time.Since(delivery.Time); age > maxResponseAge {
+		if age := time.Since(delivery.Time); age > maxReplyAge {
 			slog.Warn("skip kafka message older than 1h", "topic", delivery.Topic, "age", age.String())
 			return nil
 		}
-		return listener(delivery.Value)
+		msg := messages.ProtocolMsg{}
+		err := json.Unmarshal(delivery.Value, &msg)
+		if err != nil {
+			slog.Error("unable to unmarshal protocol message", "error", err, "msg", string(delivery.Value))
+			return nil
+		}
+		receive(Reply{TaskId: msg.TaskInfo.TaskId, Output: msg.Response.Output, Failed: failed})
+		return nil
 	})
 }
 
-// Producer sends a protocol message to the topic named by the handler of its protocol, or by
-// http POST if the handler is an http(s) url.
-type Producer struct {
-	ctx         context.Context
-	config      configuration.Config
-	mux         sync.Mutex
-	writers     map[string]*kafka.Producer
-	knownTopics map[string]bool
-}
-
-func (this *Producer) SendCommand(msg messages.ProtocolMsg) (err error) {
+func (this *Kafka) Send(msg messages.ProtocolMsg) error {
 	message, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -107,14 +115,14 @@ func (this *Producer) SendCommand(msg messages.ProtocolMsg) (err error) {
 	if isHttpHandler(topic) {
 		return sendHttp(topic, message)
 	}
-	writer, err := this.getWriter(topic)
+	writer, err := this.writer(topic)
 	if err != nil {
 		return err
 	}
 	return writer.Produce(msg.Metadata.Device.Id, message)
 }
 
-func (this *Producer) getWriter(topic string) (*kafka.Producer, error) {
+func (this *Kafka) writer(topic string) (*kafka.Producer, error) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
 	if this.config.InitTopics && !this.knownTopics[topic] {
@@ -150,51 +158,6 @@ func sendHttp(url string, message []byte) error {
 		return err
 	}
 	return nil
-}
-
-// getListener never returns an error: a message that cannot be read or handled is logged and
-// skipped. The consumer would otherwise retry it and hold back every response behind it.
-func getListener(listener func(msg messages.ProtocolMsg) error) func(msg []byte) error {
-	return func(msg []byte) error {
-		message := messages.ProtocolMsg{}
-		err := json.Unmarshal(msg, &message)
-		if err != nil {
-			slog.Error("unable to unmarshal protocol message", "error", err, "msg", string(msg))
-			return nil
-		}
-		err = listener(message)
-		if err != nil {
-			slog.Error("unable to handle protocol message", "error", err, "msg", string(msg))
-		}
-		return nil
-	}
-}
-
-func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize int64, respHandler func(msg []byte) error) func(msg []byte) (err error) {
-	queue := make(chan []byte, queueSize)
-	for i := int64(0); i < workerCount; i++ {
-		go func() {
-			for msg := range queue {
-				err := respHandler(msg)
-				if err != nil {
-					slog.Error("unable to handle response", "error", err, "msg", string(msg))
-				}
-			}
-		}()
-	}
-	go func() {
-		<-ctx.Done()
-		close(queue)
-	}()
-	return func(msg []byte) (err error) {
-		defer func() {
-			if r := recover(); r != nil {
-				err = errors.New(fmt.Sprint(r))
-			}
-		}()
-		queue <- msg
-		return err
-	}
 }
 
 func isSet(value string) bool {

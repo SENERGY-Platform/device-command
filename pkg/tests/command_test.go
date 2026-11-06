@@ -31,14 +31,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SENERGY-Platform/device-command/pkg/api"
+	"github.com/SENERGY-Platform/device-command/pkg"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/messages"
-	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
-	devicerepomodel "github.com/SENERGY-Platform/device-repository/v2/lib/model"
+	"github.com/SENERGY-Platform/device-repository/v3/lib/client"
+	devicerepomodel "github.com/SENERGY-Platform/device-repository/v3/lib/model"
 	"github.com/SENERGY-Platform/models/go/models"
 	model "github.com/SENERGY-Platform/models/go/models"
 	"github.com/google/uuid"
@@ -976,12 +974,11 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		t.Error(err)
 	})
 
-	cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, mgw.TimescaleFactory)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = api.Start(ctx, config, cmd)
+	config.ComImpl = "cloud"
+	config.MarshallerImpl = "mgw"
+	config.IotImpl = "cloud"
+	config.TimescaleImpl = "mgw"
+	err = pkg.Start(ctx, config)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1255,16 +1252,14 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			t.Error(err)
 		})
 
-		timescaleFactory := mgw.TimescaleFactory
+		config.ComImpl = "cloud"
+		config.MarshallerImpl = "mgw"
+		config.IotImpl = "cloud"
+		config.TimescaleImpl = "mgw"
 		if cloudTimescale {
-			timescaleFactory = cloud.TimescaleFactory
+			config.TimescaleImpl = "cloud"
 		}
-		cmd, err := command.NewWithFactories(ctx, config, cloud.ComFactory, mgw.MarshallerFactory, cloud.IotFactory, timescaleFactory)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		err = api.Start(ctx, config, cmd)
+		err = pkg.Start(ctx, config)
 		if err != nil {
 			t.Error(err)
 			return

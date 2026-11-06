@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/SENERGY-Platform/converter v0.0.12
-	github.com/SENERGY-Platform/device-repository/v2 v2.2.1
+	github.com/SENERGY-Platform/device-repository/v3 v3.9.1
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.8.0
 	github.com/SENERGY-Platform/marshaller v0.3.0
 	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.4
@@ -13,7 +13,6 @@ require (
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
-	github.com/julienschmidt/httprouter v1.3.0
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/segmentio/kafka-go v0.4.50
@@ -29,7 +28,8 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
 	github.com/SENERGY-Platform/developer-notifications v0.0.6 // indirect
-	github.com/SENERGY-Platform/gin-middleware v0.14.1 // indirect
+	github.com/SENERGY-Platform/device-repository/v2 v2.2.1 // indirect
+	github.com/SENERGY-Platform/gin-middleware v0.14.3 // indirect
 	github.com/SENERGY-Platform/go-env-loader v0.5.3 // indirect
 	github.com/SENERGY-Platform/go-service-base/config-hdl v1.2.0 // indirect
 	github.com/SENERGY-Platform/permissions-v2 v0.0.47 // indirect
@@ -106,7 +106,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.1.13 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

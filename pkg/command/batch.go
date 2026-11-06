@@ -17,16 +17,16 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"hash/maphash"
 	"net/http"
 	"sync"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	model "github.com/SENERGY-Platform/models/go/models"
 )
 
-func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string, preferEventValue bool) []BatchResultElement {
+func (this *Command) Batch(ctx context.Context, token auth.Token, batch BatchRequest, timeout string, preferEventValue bool) []BatchResultElement {
 	if len(batch) == 0 {
 		return []BatchResultElement{}
 	}
@@ -54,12 +54,12 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 				var code int
 				var temp interface{}
 				if cmd.DeviceId != "" && cmd.ServiceId != "" {
-					code, temp = this.DeviceCommand(token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectIds, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
+					code, temp = this.DeviceCommand(ctx, token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectIds, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				} else if cmd.GroupId != "" {
-					code, temp = this.GroupCommand(token, cmd.GroupId, cmd.FunctionId, cmd.AspectIds, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
+					code, temp = this.GroupCommand(ctx, token, cmd.GroupId, cmd.FunctionId, cmd.AspectIds, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				}
 				if code != http.StatusOK {
-					this.config.GetLogger().Warn("error batch response element", "user", token.GetUserId(), "code", code, "response", fmt.Sprintf("%#v", result))
+					this.config.GetLogger().Warn("error batch response element", "user", token.GetUserId(), "code", code, "response", fmt.Sprintf("%#v", temp))
 				}
 				mux.Lock()
 				defer mux.Unlock()
@@ -75,54 +75,4 @@ func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string,
 	}
 	wg.Wait()
 	return result
-}
-
-func (this *Command) expectedEventRequests(token auth.Token, batch []CommandMessage, preferEventValue bool) (count int64, err error) {
-	hashSeed := maphash.MakeSeed()
-	isAlreadySend := map[uint64]bool{}
-	for _, cmd := range batch {
-		hash := cmd.Hash(hashSeed)
-		if !isAlreadySend[hash] {
-			isAlreadySend[hash] = true
-			if cmd.DeviceId != "" && cmd.ServiceId != "" {
-				device, err := this.iot.GetDevice(token.Jwt(), cmd.DeviceId)
-				if err != nil {
-					return count, err
-				}
-				service, err := this.iot.GetService(token.Jwt(), device, cmd.ServiceId)
-				if err != nil {
-					return count, err
-				}
-				var aspectError error
-				for _, aspectId := range cmd.GetAspectIds() {
-					_, aspectError = this.iot.GetAspectNode(aspectId)
-					if aspectError != nil {
-						break
-					}
-				}
-				if aspectError == nil && isMeasuringFunctionId(cmd.FunctionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
-					count = count + 1
-				}
-			} else if cmd.GroupId != "" {
-				subTasks, err := this.GetSubTasks(token.Jwt(), cmd.GroupId, cmd.FunctionId, cmd.GetAspectIds(), cmd.DeviceClassId, cmd.Input)
-				if err != nil {
-					return count, err
-				}
-				for _, sub := range subTasks {
-					device, err := this.iot.GetDevice(token.Jwt(), sub.DeviceId)
-					if err != nil {
-						return count, err
-					}
-					service, err := this.iot.GetService(token.Jwt(), device, sub.ServiceId)
-					if err != nil {
-						return count, err
-					}
-					if isMeasuringFunctionId(sub.FunctionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
-						count = count + 1
-					}
-				}
-			}
-		}
-	}
-	return count, nil
 }

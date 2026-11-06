@@ -18,15 +18,45 @@ package pkg
 
 import (
 	"context"
+
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/device-command/pkg/devicerepo"
+	"github.com/SENERGY-Platform/device-command/pkg/lastvalue"
+	"github.com/SENERGY-Platform/device-command/pkg/marshaller"
+	"github.com/SENERGY-Platform/device-command/pkg/metrics"
+	"github.com/SENERGY-Platform/device-command/pkg/transport"
 )
 
+// Start runs the service until ctx is done. Every dependency picks its cloud or gateway variant by
+// its own config switch: iot_impl, marshaller_impl, timescale_impl and com_impl.
 func Start(ctx context.Context, config configuration.Config) error {
-	cmd, err := command.New(ctx, config)
+	repo, err := devicerepo.New(ctx, config)
 	if err != nil {
 		return err
 	}
-	return api.Start(ctx, config, cmd)
+	m, err := marshaller.New(ctx, config, repo)
+	if err != nil {
+		return err
+	}
+	lastValues, err := lastvalue.New(config)
+	if err != nil {
+		return err
+	}
+	replies := command.NewReplies()
+	sender, err := transport.New(ctx, config, replies.Receive)
+	if err != nil {
+		return err
+	}
+	metrics := metrics.New()
+	cmd := command.New(config, command.Dependencies{
+		DeviceRepo: repo,
+		Marshaller: m,
+		LastValues: lastValues,
+		Transport:  sender,
+		Replies:    replies,
+		Metrics:    metrics,
+	})
+	return api.Start(ctx, config, cmd, metrics)
 }

@@ -26,14 +26,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SENERGY-Platform/device-command/pkg/api"
+	"github.com/SENERGY-Platform/device-command/pkg"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw/mqtt"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
-	"github.com/SENERGY-Platform/device-repository/v2/lib/database"
-	devicerepomodel "github.com/SENERGY-Platform/device-repository/v2/lib/model"
+	"github.com/SENERGY-Platform/device-command/pkg/transport"
+	"github.com/SENERGY-Platform/device-repository/v3/lib/client"
+	"github.com/SENERGY-Platform/device-repository/v3/lib/database"
+	devicerepomodel "github.com/SENERGY-Platform/device-repository/v3/lib/model"
 	"github.com/SENERGY-Platform/models/go/models"
 	model "github.com/SENERGY-Platform/models/go/models"
 )
@@ -59,7 +58,6 @@ func testMgwCommandWithTimeoutAuth(t *testing.T) {
 	config.MarshallerImpl = "mgw"
 	config.IotImpl = "mgw"
 	config.TimescaleImpl = "mgw"
-	config.AsyncCacheRefresh = true
 	config.RequestUserIdp = "user:mgw-fallback-token"
 	config.AuthClientId = "test"
 	config.AuthUserName = "test"
@@ -255,16 +253,17 @@ func testMgwCommandWithTimeoutAuth(t *testing.T) {
 	}
 	time.Sleep(1 * time.Second)
 
-	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	mqttClient, err := newTestMqttClient(ctx, config.MgwMqttBroker, "testMgwCommand-client")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		var err error //handlers run concurrently and must not share the err of the test
 		t.Log(topic, string(payload))
 		if strings.HasPrefix(topic, "command/") {
-			msg := mgw.Command{}
+			msg := transport.MqttCommand{}
 			err = json.Unmarshal(payload, &msg)
 			if err != nil {
 				t.Error(err)
@@ -330,12 +329,7 @@ func testMgwCommandWithTimeoutAuth(t *testing.T) {
 		}
 	})
 
-	cmd, err := command.New(ctx, config)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = api.Start(ctx, config, cmd)
+	err = pkg.Start(ctx, config)
 	if err != nil {
 		t.Error(err)
 		return
@@ -532,7 +526,6 @@ func TestMgwCommand(t *testing.T) {
 	config.MarshallerImpl = "mgw"
 	config.IotImpl = "mgw"
 	config.TimescaleImpl = "mgw"
-	config.AsyncCacheRefresh = false
 
 	config.ServerPort, err = GetFreePort()
 	if err != nil {
@@ -722,16 +715,17 @@ func TestMgwCommand(t *testing.T) {
 	}
 	time.Sleep(1 * time.Second)
 
-	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	mqttClient, err := newTestMqttClient(ctx, config.MgwMqttBroker, "testMgwCommand-client")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		var err error //handlers run concurrently and must not share the err of the test
 		t.Log(topic, string(payload))
 		if strings.HasPrefix(topic, "command/") {
-			msg := mgw.Command{}
+			msg := transport.MqttCommand{}
 			err = json.Unmarshal(payload, &msg)
 			if err != nil {
 				t.Error(err)
@@ -797,12 +791,7 @@ func TestMgwCommand(t *testing.T) {
 		}
 	})
 
-	cmd, err := command.New(ctx, config)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = api.Start(ctx, config, cmd)
+	err = pkg.Start(ctx, config)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1137,7 +1126,7 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	mqttClient, err := newTestMqttClient(ctx, config.MgwMqttBroker, "testMgwCommand-client")
 	if err != nil {
 		t.Error(err)
 		return
@@ -1150,9 +1139,10 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 	}
 
 	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		var err error //handlers run concurrently and must not share the err of the test
 		t.Log(topic, string(payload))
 		if strings.HasPrefix(topic, "command/") {
-			msg := mgw.Command{}
+			msg := transport.MqttCommand{}
 			err = json.Unmarshal(payload, &msg)
 			if err != nil {
 				t.Error(err)
@@ -1182,12 +1172,7 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 		}
 	})
 
-	cmd, err := command.New(ctx, config)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = api.Start(ctx, config, cmd)
+	err = pkg.Start(ctx, config)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1370,7 +1355,7 @@ func TestShellyError(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	mqttClient, err := newTestMqttClient(ctx, config.MgwMqttBroker, "testMgwCommand-client")
 	if err != nil {
 		t.Error(err)
 		return
@@ -1383,9 +1368,10 @@ func TestShellyError(t *testing.T) {
 	}
 
 	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		var err error //handlers run concurrently and must not share the err of the test
 		t.Log(topic, string(payload))
 		if strings.HasPrefix(topic, "command/") {
-			msg := mgw.Command{}
+			msg := transport.MqttCommand{}
 			err = json.Unmarshal(payload, &msg)
 			if err != nil {
 				t.Error(err)
@@ -1415,12 +1401,7 @@ func TestShellyError(t *testing.T) {
 		}
 	})
 
-	cmd, err := command.New(ctx, config)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = api.Start(ctx, config, cmd)
+	err = pkg.Start(ctx, config)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1525,7 +1506,7 @@ func TestCharacteristicError(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	mqttClient, err := mqtt.New(ctx, config.MgwMqttBroker, "testMgwCommand-client", "", "")
+	mqttClient, err := newTestMqttClient(ctx, config.MgwMqttBroker, "testMgwCommand-client")
 	if err != nil {
 		t.Error(err)
 		return
@@ -1538,9 +1519,10 @@ func TestCharacteristicError(t *testing.T) {
 	}
 
 	err = mqttClient.Subscribe("#", 2, func(topic string, payload []byte) {
+		var err error //handlers run concurrently and must not share the err of the test
 		t.Log(topic, string(payload))
 		if strings.HasPrefix(topic, "command/") {
-			msg := mgw.Command{}
+			msg := transport.MqttCommand{}
 			err = json.Unmarshal(payload, &msg)
 			if err != nil {
 				t.Error(err)
@@ -1572,12 +1554,7 @@ func TestCharacteristicError(t *testing.T) {
 		}
 	})
 
-	cmd, err := command.New(ctx, config)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = api.Start(ctx, config, cmd)
+	err = pkg.Start(ctx, config)
 	if err != nil {
 		t.Error(err)
 		return

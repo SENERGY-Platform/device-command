@@ -17,66 +17,63 @@
 package command
 
 import (
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/device-command/pkg/marshaller"
 	"github.com/SENERGY-Platform/device-command/pkg/messages"
+	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	model "github.com/SENERGY-Platform/models/go/models"
 	"github.com/google/uuid"
 )
 
-func (this *Command) DeviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(token, deviceId, serviceId, functionId, aspectIds, input, timeout, preferEventValue, characteristicId)
+func (this *Command) DeviceCommand(ctx context.Context, token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+	code, resp = this.deviceCommand(ctx, token, deviceId, serviceId, functionId, aspectIds, input, timeout, preferEventValue, characteristicId)
 	if code == http.StatusOK {
 		resp = []interface{}{resp}
 	}
 	return code, resp
 }
 
-func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+func (this *Command) deviceCommand(ctx context.Context, token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
 	timeoutDuration := this.config.DefaultTimeoutDuration
-	var err error
 	if timeout != "" {
-		timeoutDuration, err = time.ParseDuration(timeout)
-		if err != nil {
-			timeoutDuration = this.config.DefaultTimeoutDuration
+		parsed, err := time.ParseDuration(timeout)
+		if err == nil {
+			timeoutDuration = parsed
 		}
 	}
 
-	device, err := this.iot.GetDevice(token.Jwt(), deviceId)
+	device, err := this.repo.GetDevice(ctx, token.Jwt(), deviceId)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load device: " + err.Error()
 	}
-	service, err := this.iot.GetService(token.Jwt(), device, serviceId)
+	service, err := this.repo.GetService(ctx, token.Jwt(), device, serviceId)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load service: " + err.Error()
 	}
-
-	function, err := this.iot.GetFunction(functionId)
+	function, err := this.repo.GetFunction(ctx, functionId)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load function: " + err.Error()
 	}
-
 	if characteristicId == "" && function.ConceptId != "" {
-		concept, err := this.iot.GetConcept(function.ConceptId)
+		concept, err := this.repo.GetConcept(ctx, function.ConceptId)
 		if err != nil {
 			return http.StatusInternalServerError, "unable to load concept: " + err.Error()
 		}
 		characteristicId = concept.BaseCharacteristicId
 	}
-
-	protocol, err := this.iot.GetProtocol(token.Jwt(), service.ProtocolId)
+	protocol, err := this.repo.GetProtocol(ctx, token.Jwt(), service.ProtocolId)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
 	}
-
 	aspectNodes := []model.AspectNode{}
 	for _, aspectId := range aspectIds {
-		aspectNode, err := this.iot.GetAspectNode(aspectId)
+		aspectNode, err := this.repo.GetAspectNode(ctx, aspectId)
 		if err != nil {
 			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error()
 		}
@@ -85,29 +82,21 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 
 	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
 		this.metrics.LogGetLastEventValue(token.GetUserId(), device.Id, service.Id, functionId)
-
-		return this.GetLastEventValue(token, device, service, protocol, characteristicId, functionId, aspectNodes, timeoutDuration)
+		return this.GetLastEventValue(ctx, token, device, service, protocol, characteristicId, functionId, aspectNodes, timeoutDuration)
 	}
 
-	var inputCharacteristicId string
-	var outputCharacteristicId string
-
-	var outputFunctionId string
+	var inputCharacteristicId, outputCharacteristicId, outputFunctionId string
 	var outputAspectNodes []model.AspectNode
-
-	data := []interfaces.MarshallingV2RequestData{}
-
+	data := []marshaller.MarshalData{}
 	if isControllingFunction(function) {
 		inputCharacteristicId = characteristicId
 		if input != nil {
-			data = []interfaces.MarshallingV2RequestData{
-				{
-					Value:            input,
-					CharacteristicId: inputCharacteristicId,
-					FunctionId:       functionId,
-					AspectNodes:      aspectNodes,
-				},
-			}
+			data = append(data, marshaller.MarshalData{
+				Value:            input,
+				CharacteristicId: inputCharacteristicId,
+				FunctionId:       functionId,
+				AspectNodes:      aspectNodes,
+			})
 		}
 	} else {
 		outputCharacteristicId = characteristicId
@@ -115,15 +104,13 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		outputAspectNodes = aspectNodes
 	}
 
-	marshalledInput, err := this.marshaller.MarshalV2(service, protocol, data)
+	marshalledInput, err := this.marshaller.Marshal(service, protocol, data)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to marshal input: " + err.Error()
 	}
 
 	taskId := uuid.New().String()
-	this.register.Register(taskId)
-
-	protocolMessage := messages.ProtocolMsg{
+	msg := messages.ProtocolMsg{
 		TaskInfo: messages.TaskInfo{
 			TaskId:   taskId,
 			Time:     strconv.FormatInt(time.Now().Unix(), 10),
@@ -145,26 +132,49 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 		},
 		Trace: []messages.Trace{},
 	}
-
 	//keeps the deprecated single node filled, for a protocol handler that does not know the list yet
-	protocolMessage.Metadata.SetOutputAspectNodes(outputAspectNodes)
+	msg.Metadata.SetOutputAspectNodes(outputAspectNodes)
 
 	this.metrics.LogCommandSend(token.GetUserId(), device.Id, service.Id, functionId)
 
-	err = this.producer.SendCommand(protocolMessage)
+	replies := this.replies.expect(taskId)
+	defer this.replies.forget(taskId)
+	err = this.transport.Send(msg)
 	if err != nil {
 		this.config.GetLogger().Error("unable to produce command message", "error", err)
-		this.register.Complete(taskId, http.StatusInternalServerError, "unable to produce message")
+		return http.StatusInternalServerError, "unable to produce message"
 	}
-	return this.register.WaitWithTimeout(taskId, timeoutDuration)
+
+	select {
+	case reply := <-replies:
+		if reply.Failed {
+			return http.StatusInternalServerError, reply.Output
+		}
+		if outputCharacteristicId == "" || outputCharacteristicId == marshallermodel.NullCharacteristic.Id {
+			return http.StatusOK, nil
+		}
+		output, err := this.marshaller.Unmarshal(marshaller.UnmarshalRequest{
+			Service:          service,
+			Protocol:         protocol,
+			CharacteristicId: outputCharacteristicId,
+			Message:          reply.Output,
+			FunctionId:       outputFunctionId,
+			AspectNodes:      outputAspectNodes,
+		})
+		if err != nil {
+			return http.StatusInternalServerError, err.Error()
+		}
+		return http.StatusOK, output
+	case <-time.After(timeoutDuration):
+		return http.StatusRequestTimeout, "timeout"
+	}
 }
 
 func isControllingFunction(function model.Function) bool {
-	if function.RdfType == model.SES_ONTOLOGY_CONTROLLING_FUNCTION {
-		return true
-	}
-	if strings.HasPrefix(function.Id, "urn:infai:ses:controlling-function:") {
-		return true
-	}
-	return false
+	return function.RdfType == model.SES_ONTOLOGY_CONTROLLING_FUNCTION ||
+		strings.HasPrefix(function.Id, model.CONTROLLING_FUNCTION_PREFIX)
+}
+
+func isMeasuringFunctionId(id string) bool {
+	return strings.HasPrefix(id, model.MEASURING_FUNCTION_PREFIX)
 }

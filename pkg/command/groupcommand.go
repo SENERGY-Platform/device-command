@@ -17,6 +17,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sort"
@@ -27,12 +28,13 @@ import (
 	model "github.com/SENERGY-Platform/models/go/models"
 )
 
-func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
-	subTasks, err := this.GetSubTasks(token.Jwt(), groupId, functionId, aspectIds, deviceClassId, input)
+func (this *Command) GroupCommand(ctx context.Context, token auth.Token, groupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+	subTasks, err := this.GetSubTasks(ctx, token.Jwt(), groupId, functionId, aspectIds, deviceClassId, input)
 	if err != nil {
 		return http.StatusInternalServerError, err.Error()
 	}
 	wg := sync.WaitGroup{}
+	mux := sync.Mutex{}
 	results := []interface{}{}
 	var lastErr interface{}
 	var lastErrCode int
@@ -40,8 +42,10 @@ func (this *Command) GroupCommand(token auth.Token, groupId string, functionId s
 		wg.Add(1)
 		go func(sub SubCommand) {
 			defer wg.Done()
-			tempCode, temp := this.deviceCommand(token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectIds, input, timeout, preferEventValue, characteristicId)
+			tempCode, temp := this.deviceCommand(ctx, token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectIds, input, timeout, preferEventValue, characteristicId)
 			this.config.GetLogger().Debug("group sub result", "user", token.GetUserId(), "code", tempCode, "result", fmt.Sprintf("%#v", temp))
+			mux.Lock()
+			defer mux.Unlock()
 			if tempCode == http.StatusOK {
 				results = append(results, temp)
 			} else {
@@ -65,25 +69,25 @@ type SubCommand struct {
 	ServiceId  string      `json:"service_id,omitempty"`
 }
 
-func (this *Command) GetSubTasks(token string, deviceGroupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}) (result []SubCommand, err error) {
-	group, err := this.iot.GetDeviceGroup(token, deviceGroupId)
+func (this *Command) GetSubTasks(ctx context.Context, token string, deviceGroupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}) (result []SubCommand, err error) {
+	group, err := this.repo.GetDeviceGroup(ctx, token, deviceGroupId)
 	if err != nil {
 		return nil, err
 	}
 	for _, deviceId := range group.DeviceIds {
-		device, err := this.iot.GetDevice(token, deviceId)
+		device, err := this.repo.GetDevice(ctx, token, deviceId)
 		if err != nil {
 			return nil, err
 		}
 
-		deviceType, err := this.iot.GetDeviceType(token, device.DeviceTypeId)
+		deviceType, err := this.repo.GetDeviceType(ctx, token, device.DeviceTypeId)
 		if err != nil {
 			return nil, err
 		}
 
 		aspectNodes := []model.AspectNode{}
 		for _, aspectId := range aspectIds {
-			aspectNode, err := this.iot.GetAspectNode(aspectId)
+			aspectNode, err := this.repo.GetAspectNode(ctx, aspectId)
 			if err != nil {
 				this.config.GetLogger().Warn("unable to find aspect node, use aspect node without descendants", "aspect_id", aspectId, "error", err)
 				aspectNode = model.AspectNode{Id: aspectId}

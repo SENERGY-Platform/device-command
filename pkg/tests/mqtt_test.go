@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -82,4 +83,35 @@ func Mqtt(ctx context.Context, wg *sync.WaitGroup) (hostPort string, ipAddress s
 	hostPort = temp.Port()
 
 	return hostPort, ipAddress, err
+}
+
+// testMqttClient stands in for a connector on a gateway
+type testMqttClient struct {
+	client paho.Client
+}
+
+func newTestMqttClient(ctx context.Context, broker string, clientId string) (*testMqttClient, error) {
+	client := paho.NewClient(paho.NewClientOptions().AddBroker(broker).SetClientID(clientId).SetCleanSession(true).SetOrderMatters(false))
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+	go func() {
+		<-ctx.Done()
+		client.Disconnect(0)
+	}()
+	return &testMqttClient{client: client}, nil
+}
+
+func (this *testMqttClient) Subscribe(topic string, qos byte, handler func(topic string, payload []byte)) error {
+	token := this.client.Subscribe(topic, qos, func(_ paho.Client, message paho.Message) {
+		handler(message.Topic(), message.Payload())
+	})
+	token.Wait()
+	return token.Error()
+}
+
+func (this *testMqttClient) Publish(topic string, qos byte, retained bool, payload []byte) error {
+	token := this.client.Publish(topic, qos, retained, payload)
+	token.Wait()
+	return token.Error()
 }

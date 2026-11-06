@@ -17,6 +17,7 @@
 package command
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,19 +25,23 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
+	"github.com/SENERGY-Platform/device-command/pkg/lastvalue"
+	"github.com/SENERGY-Platform/device-command/pkg/marshaller"
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/serialization"
-	"github.com/SENERGY-Platform/models/go/models"
 	model "github.com/SENERGY-Platform/models/go/models"
 )
 
-func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspectNodes []model.AspectNode, timeout time.Duration) (code int, result interface{}) {
-	output, err, code := this.getLastEventMessage(token, device, service, protocol, timeout)
+// StatusMissingLastValue answers a measuring command on a gateway, if the device has not sent since
+// mgw-last-value started. A client may then ask the platform instead.
+const StatusMissingLastValue = 513
+
+func (this *Command) GetLastEventValue(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspectNodes []model.AspectNode, timeout time.Duration) (code int, result interface{}) {
+	output, err, code := this.getLastEventMessage(ctx, token, device, service, protocol, timeout)
 	if err != nil {
 		return code, "unable to get event value: " + err.Error()
 	}
-	req := interfaces.UnmarshallingV2Request{
+	req := marshaller.UnmarshalRequest{
 		Service:          service,
 		Protocol:         protocol,
 		CharacteristicId: characteristicId,
@@ -44,7 +49,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 		FunctionId:       functionId,
 		AspectNodes:      aspectNodes,
 	}
-	temp, err := this.marshaller.UnmarshalV2(req)
+	temp, err := this.marshaller.Unmarshal(req)
 	if err != nil {
 		this.config.GetLogger().Debug("unable to unmarshal event value", "error", err, "UnmarshallingV2Request", fmt.Sprintf("%#v", req))
 		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()
@@ -52,10 +57,10 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 	return 200, temp
 }
 
-func (this *Command) getLastEventMessage(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (result map[string]string, err error, code int) {
-	response, err := this.timescale.GetLastMessage(token, device, service, protocol, timeout)
-	if errors.Is(err, interfaces.ErrMissingLastValue) {
-		return result, err, interfaces.ErrMissingLastValueCode
+func (this *Command) getLastEventMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (result map[string]string, err error, code int) {
+	response, err := this.lastValues.LastMessage(ctx, token, device, service, protocol, timeout)
+	if errors.Is(err, lastvalue.ErrMissing) {
+		return result, err, StatusMissingLastValue
 	}
 	if err != nil {
 		return result, err, http.StatusInternalServerError
@@ -80,7 +85,7 @@ func (this *Command) useProtocolSerialization(service model.Service, protocol mo
 }
 
 func marshalSegmentValue(serializationTo string, value interface{}, rootName string) (string, error) {
-	m, ok := serialization.Get(models.Serialization(serializationTo))
+	m, ok := serialization.Get(model.Serialization(serializationTo))
 	if !ok {
 		err := errors.New("unknown serialization")
 		slog.Error("unable to get serialization", "error", err, "serialization", serializationTo)

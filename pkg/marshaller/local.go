@@ -42,16 +42,16 @@ func NewLocal(ctx context.Context, config configuration.Config, repo *devicerepo
 		return nil, err
 	}
 	concepts := newConcepts(ctx, repo, config)
-	return &Local{v2: v2.New(marshallerconfig.Config{}, converter, concepts)}, nil
+	return &Local{v2: v2.New(marshallerconfig.Config{}, contextFreeConverter{converter}, concepts)}, nil
 }
 
-func (this *Local) Marshal(service model.Service, protocol model.Protocol, data []MarshalData) (map[string]string, error) {
-	return this.v2.Marshal(protocol, service, data)
+func (this *Local) Marshal(ctx context.Context, service model.Service, protocol model.Protocol, data []MarshalData) (map[string]string, error) {
+	return this.v2.Marshal(ctx, protocol, service, data)
 }
 
 // Unmarshal picks the output path by function and aspects if the request names none, the way the
 // marshaller service does.
-func (this *Local) Unmarshal(request UnmarshalRequest) (interface{}, error) {
+func (this *Local) Unmarshal(ctx context.Context, request UnmarshalRequest) (interface{}, error) {
 	if request.Path == "" {
 		paths := this.v2.GetOutputPaths(request.Service, request.FunctionId, request.GetAspectNodes())
 		if len(paths) == 0 {
@@ -62,5 +62,19 @@ func (this *Local) Unmarshal(request UnmarshalRequest) (interface{}, error) {
 		}
 		request.Path = paths[0]
 	}
-	return this.v2.Unmarshal(request.Protocol, request.Service, request.CharacteristicId, request.Path, request.Message, nil)
+	return this.v2.Unmarshal(ctx, request.Protocol, request.Service, request.CharacteristicId, request.Path, request.Message, nil)
+}
+
+// contextFreeConverter runs the converter library in process, where it needs no context; the
+// marshaller passes one for its own converter, which is a service called over http.
+type contextFreeConverter struct {
+	*converterService.Converter
+}
+
+func (this contextFreeConverter) Cast(_ context.Context, in interface{}, from string, to string) (interface{}, error) {
+	return this.Converter.Cast(in, from, to)
+}
+
+func (this contextFreeConverter) CastWithExtension(_ context.Context, in interface{}, from string, to string, extensions []model.ConverterExtension) (interface{}, error) {
+	return this.Converter.CastWithExtension(in, from, to, extensions)
 }

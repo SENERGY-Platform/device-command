@@ -17,6 +17,8 @@
 package marshaller
 
 import (
+	"context"
+
 	"github.com/SENERGY-Platform/marshaller/lib/api/messages"
 	marshallerclient "github.com/SENERGY-Platform/marshaller/lib/client"
 	model "github.com/SENERGY-Platform/models/go/models"
@@ -29,15 +31,15 @@ type Remote struct {
 
 func NewRemote(url string) *Remote {
 	//no auth token: the marshaller is called service internally, not routed over the api-gateway
-	return &Remote{client: marshallerclient.NewClient(url, nil)}
+	return &Remote{client: marshallerclient.NewClient(url, marshallerclient.Options{})}
 }
 
-func (this *Remote) Marshal(service model.Service, protocol model.Protocol, data []MarshalData) (result map[string]string, err error) {
-	result, err, _ = this.client.MarshalV2(messages.MarshallingV2Request{Service: service, Protocol: protocol, Data: data})
+func (this *Remote) Marshal(ctx context.Context, service model.Service, protocol model.Protocol, data []MarshalData) (result map[string]string, err error) {
+	result, err, _ = this.client.MarshalV2(ctx, messages.MarshallingV2Request{Service: service, Protocol: protocol, Data: data})
 	return result, err
 }
 
-func (this *Remote) Unmarshal(request UnmarshalRequest) (result interface{}, err error) {
-	result, err, _ = this.client.UnmarshalV2(request)
+func (this *Remote) Unmarshal(ctx context.Context, request UnmarshalRequest) (result interface{}, err error) {
+	result, err, _ = this.client.UnmarshalV2(ctx, request)
 	return result, err
 }

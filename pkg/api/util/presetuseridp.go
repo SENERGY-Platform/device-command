@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func NewPresetUserIdp(config configuration.Config, handler http.Handler) (http.Handler, error) {
@@ -66,8 +66,8 @@ func (this *PresetUserIdp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (this *PresetUserIdp) GenerateUserTokenById(userid string) (token string, err error) {
-	claims := jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+	claims := jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		Issuer:    "mgw-device-command",
 		Subject:   userid,
 	}

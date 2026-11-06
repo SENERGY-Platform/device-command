@@ -13,12 +13,12 @@ import (
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func generateUserTokenById(userid string) (token string, err error) {
-	claims := jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+	claims := jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		Issuer:    "mgw-device-command",
 		Subject:   userid,
 	}

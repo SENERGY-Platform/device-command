@@ -36,8 +36,8 @@ type (
 )
 
 type Marshaller interface {
-	Marshal(service model.Service, protocol model.Protocol, data []MarshalData) (map[string]string, error)
-	Unmarshal(request UnmarshalRequest) (interface{}, error)
+	Marshal(ctx context.Context, service model.Service, protocol model.Protocol, data []MarshalData) (map[string]string, error)
+	Unmarshal(ctx context.Context, request UnmarshalRequest) (interface{}, error)
 }
 
 // New returns the marshaller service client, or the in-process marshaller with

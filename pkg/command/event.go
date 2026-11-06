@@ -49,7 +49,7 @@ func (this *Command) GetLastEventValue(ctx context.Context, token auth.Token, de
 		FunctionId:       functionId,
 		AspectNodes:      aspectNodes,
 	}
-	temp, err := this.marshaller.Unmarshal(req)
+	temp, err := this.marshaller.Unmarshal(ctx, req)
 	if err != nil {
 		this.config.GetLogger().Debug("unable to unmarshal event value", "error", err, "UnmarshallingV2Request", fmt.Sprintf("%#v", req))
 		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()

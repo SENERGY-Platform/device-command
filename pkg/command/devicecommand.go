@@ -104,7 +104,7 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 		outputAspectNodes = aspectNodes
 	}
 
-	marshalledInput, err := this.marshaller.Marshal(service, protocol, data)
+	marshalledInput, err := this.marshaller.Marshal(ctx, service, protocol, data)
 	if err != nil {
 		return http.StatusInternalServerError, "unable to marshal input: " + err.Error()
 	}
@@ -153,7 +153,7 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 		if outputCharacteristicId == "" || outputCharacteristicId == marshallermodel.NullCharacteristic.Id {
 			return http.StatusOK, nil
 		}
-		output, err := this.marshaller.Unmarshal(marshaller.UnmarshalRequest{
+		output, err := this.marshaller.Unmarshal(ctx, marshaller.UnmarshalRequest{
 			Service:          service,
 			Protocol:         protocol,
 			CharacteristicId: outputCharacteristicId,

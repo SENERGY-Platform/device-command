@@ -18,15 +18,16 @@ package tests
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/ory/dockertest/v3"
 	"log"
-	"net/http"
 	"sync"
+
+	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func lastValueEnv(config configuration.Config, ctx context.Context, wg *sync.WaitGroup) (configuration.Config, error) {
-	port, _, err := MgwLastValue(ctx, wg, config.MgwMqttBroker)
+	port, err := MgwLastValue(ctx, wg, config.MgwMqttBroker)
 	if err != nil {
 		return config, err
 	}
@@ -34,31 +35,32 @@ func lastValueEnv(config configuration.Config, ctx context.Context, wg *sync.Wai
 	return config, nil
 }
 
-func MgwLastValue(ctx context.Context, wg *sync.WaitGroup, mqttBroker string) (hostPort string, ipAddress string, err error) {
+func MgwLastValue(ctx context.Context, wg *sync.WaitGroup, mqttBroker string) (hostPort string, err error) {
 	log.Println("start mgw-last-value")
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		return "", "", err
-	}
-	container, err := pool.Run("ghcr.io/senergy-platform/mgw-last-value", "dev", []string{
-		"MQTT_BROKER=" + mqttBroker,
-		"DEBUG=true",
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "ghcr.io/senergy-platform/mgw-last-value:dev",
+			ExposedPorts: []string{"8080/tcp"},
+			Env: map[string]string{
+				"MQTT_BROKER": mqttBroker,
+				"DEBUG":       "true",
+			},
+			WaitingFor: wait.ForHTTP("/").WithPort("8080/tcp").WithStatusCodeMatcher(func(int) bool { return true }),
+		},
+		Started: true,
 	})
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove container " + container.Container.Name)
-		log.Println(container.Close())
+		log.Println("DEBUG: remove container mgw-last-value", container.Terminate(context.Background()))
 	}()
-	//go Dockerlog(pool, ctx, container, "MGW-LAST-VALUE")
-	hostPort = container.GetPort("8080/tcp")
-	err = pool.Retry(func() error {
-		_, err := http.Get("http://localhost:" + hostPort)
-		return err
-	})
-	return hostPort, container.Container.NetworkSettings.IPAddress, err
+	port, err := container.MappedPort(ctx, "8080/tcp")
+	if err != nil {
+		return "", err
+	}
+	return port.Port(), nil
 }

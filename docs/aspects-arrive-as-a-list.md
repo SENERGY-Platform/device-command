@@ -10,7 +10,9 @@ Applies from `device-repository/v2 v2.2.1`, `marshaller v0.2.0`,
 `external-task-worker v0.1.1` and
 `models/go v0.0.0-20260911075423-f01521c01da2` onwards, to the requests this
 service accepts on `/commands` and `/commands/batch` and to the protocol message
-it writes.
+it writes. The protocol message types came from the external-task-worker until
+it was archived; they are now in `pkg/messages`, taken over from `v0.1.1`
+without a change to their json form.
 
 Not about the aspects of a **content variable**. Those are `aspect_ids` on the
 device type and say what a variable carries; the fields here say what a command
@@ -43,7 +45,7 @@ deprecated field is gone by then.
 | `command.CommandMessage` | `aspect_id` | `aspect_ids` | `GetAspectIds()`, `SetAspectIds()` |
 | `command.BatchRequest` | — | — | `SetAspectIds()` folds every element |
 | `command.SubCommand` | — | `AspectIds` | — |
-| `messages.Metadata` (external-task-worker) | `output_aspect_node` | `output_aspect_nodes` | `GetOutputAspectNodes()`, `SetOutputAspectNodes()` |
+| `messages.Metadata` (`pkg/messages`) | `output_aspect_node` | `output_aspect_nodes` | `GetOutputAspectNodes()`, `SetOutputAspectNodes()` |
 
 `SubCommand` is in-process only and never serialized, so it carries the list
 alone.

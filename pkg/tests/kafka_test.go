@@ -22,7 +22,8 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/test/docker"
+	"github.com/SENERGY-Platform/service-commons/pkg/kafka"
+	"github.com/SENERGY-Platform/service-commons/pkg/testing/docker"
 )
 
 func kafkaEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.WaitGroup) (config configuration.Config, err error) {
@@ -41,4 +42,44 @@ func kafkaEnv(initialConfig configuration.Config, ctx context.Context, wg *sync.
 	time.Sleep(5 * time.Second)
 
 	return config, nil
+}
+
+// testProducer stands in for a protocol connector that answers on the topic the command names
+type testProducer struct {
+	ctx      context.Context
+	kafkaUrl string
+	mux      sync.Mutex
+	writers  map[string]*kafka.Producer
+}
+
+func newTestProducer(ctx context.Context, kafkaUrl string) *testProducer {
+	return &testProducer{ctx: ctx, kafkaUrl: kafkaUrl, writers: map[string]*kafka.Producer{}}
+}
+
+func (this *testProducer) ProduceWithKey(topic string, key string, message string) error {
+	this.mux.Lock()
+	writer, ok := this.writers[topic]
+	if !ok {
+		var err error
+		writer, err = kafka.NewProducer(this.ctx, kafka.Config{KafkaUrl: this.kafkaUrl}, topic)
+		if err != nil {
+			this.mux.Unlock()
+			return err
+		}
+		this.writers[topic] = writer
+	}
+	this.mux.Unlock()
+	return writer.Produce(key, []byte(message))
+}
+
+// testConsumer reads the commands a protocol connector would get. The topic is created by the
+// consumer, before device-command produces to it.
+func testConsumer(ctx context.Context, kafkaUrl string, groupId string, topic string, listener func(msg []byte) error, onError func(err error)) error {
+	return kafka.NewConsumer(ctx, kafka.Config{
+		KafkaUrl:      kafkaUrl,
+		ConsumerGroup: groupId,
+		StartOffset:   kafka.FirstOffset,
+		InitTopic:     true,
+		OnError:       onError,
+	}, topic, listener)
 }

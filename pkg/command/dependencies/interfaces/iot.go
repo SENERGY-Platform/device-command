@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
 type Iot interface {

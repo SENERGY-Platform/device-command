@@ -25,11 +25,10 @@ import (
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	"github.com/SENERGY-Platform/marshaller/lib/marshaller/serialization"
 	"github.com/SENERGY-Platform/models/go/models"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
 func (this *Command) GetLastEventValue(token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspectNodes []model.AspectNode, timeout time.Duration) (code int, result interface{}) {
@@ -37,7 +36,7 @@ func (this *Command) GetLastEventValue(token auth.Token, device model.Device, se
 	if err != nil {
 		return code, "unable to get event value: " + err.Error()
 	}
-	req := marshaller.UnmarshallingV2Request{
+	req := interfaces.UnmarshallingV2Request{
 		Service:          service,
 		Protocol:         protocol,
 		CharacteristicId: characteristicId,

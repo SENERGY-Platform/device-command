@@ -55,22 +55,12 @@ type Config struct {
 
 	KafkaConsumerGroup string `json:"kafka_consumer_group"`
 	ResponseTopic      string `json:"response_topic"`
-	GroupScheduler     string `json:"group_scheduler"`
 
 	MetadataResponseTo string `json:"metadata_response_to"`
 
-	AsyncFlushFrequency string `json:"async_flush_frequency"`
-	AsyncCompression    string `json:"async_compression"`
-	SyncCompression     string `json:"sync_compression"`
-	Sync                bool   `json:"sync"`
-	SyncIdempotent      bool   `json:"sync_idempotent"`
-	PartitionNum        int64  `json:"partition_num"`
-	ReplicationFactor   int64  `json:"replication_factor"`
-	AsyncFlushMessages  int64  `json:"async_flush_messages"`
-
-	KafkaConsumerMaxWait  string `json:"kafka_consumer_max_wait"`
-	KafkaConsumerMinBytes int64  `json:"kafka_consumer_min_bytes"`
-	KafkaConsumerMaxBytes int64  `json:"kafka_consumer_max_bytes"`
+	//partitions and replication factor of a command topic this service creates; only with InitTopics
+	PartitionNum      int64 `json:"partition_num"`
+	ReplicationFactor int64 `json:"replication_factor"`
 
 	MetadataErrorTo string `json:"metadata_error_to"`
 	ErrorTopic      string `json:"error_topic"`

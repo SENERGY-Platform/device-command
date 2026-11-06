@@ -25,25 +25,22 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/IBM/sarama"
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/cloud"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/impl/mgw"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/device-command/pkg/messages"
 	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
 	devicerepomodel "github.com/SENERGY-Platform/device-repository/v2/lib/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com/kafka"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
 	"github.com/SENERGY-Platform/models/go/models"
+	model "github.com/SENERGY-Platform/models/go/models"
 	"github.com/google/uuid"
 )
 
@@ -949,39 +946,9 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	//connector mock
-	maxWait, err := time.ParseDuration(config.KafkaConsumerMaxWait)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	producer, err := kafka.PrepareProducerWithConfig(ctx, config.KafkaUrl, kafka.ProducerConfig{
-		AsyncFlushFrequency: 100 * time.Millisecond,
-		AsyncCompression:    sarama.CompressionNone,
-		SyncCompression:     sarama.CompressionNone,
-		Sync:                config.Sync,
-		SyncIdempotent:      config.SyncIdempotent,
-		PartitionNum:        int(config.PartitionNum),
-		ReplicationFactor:   int(config.ReplicationFactor),
-		AsyncFlushMessages:  int(config.AsyncFlushMessages),
-		TopicConfigMap:      config.KafkaTopicConfigs,
-	})
-	if err != nil {
-		t.Log(config.KafkaUrl)
-		t.Error(err)
-		return
-	}
-	producer.Log(log.New(os.Stdout, "[KAFKA-PRODUCER] ", 0))
+	producer := newTestProducer(ctx, config.KafkaUrl)
 
-	err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
-		KafkaUrl:       config.KafkaUrl,
-		GroupId:        uuid.NewString(),
-		Topic:          "moses",
-		MinBytes:       int(config.KafkaConsumerMinBytes),
-		MaxBytes:       int(config.KafkaConsumerMaxBytes),
-		MaxWait:        maxWait,
-		TopicConfigMap: config.KafkaTopicConfigs,
-		InitTopics:     true,
-	}, func(_ string, msg []byte, time time.Time) error {
+	err = testConsumer(ctx, config.KafkaUrl, uuid.NewString(), "moses", func(msg []byte) error {
 		t.Log("MESSAGE:", string(msg))
 		log.Println("MESSAGE:", string(msg))
 		message := messages.ProtocolMsg{}
@@ -1201,28 +1168,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 		time.Sleep(1 * time.Second)
 
 		//connector mock
-		maxWait, err := time.ParseDuration(config.KafkaConsumerMaxWait)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		producer, err := kafka.PrepareProducerWithConfig(ctx, config.KafkaUrl, kafka.ProducerConfig{
-			AsyncFlushFrequency: 100 * time.Millisecond,
-			AsyncCompression:    sarama.CompressionNone,
-			SyncCompression:     sarama.CompressionNone,
-			Sync:                config.Sync,
-			SyncIdempotent:      config.SyncIdempotent,
-			PartitionNum:        int(config.PartitionNum),
-			ReplicationFactor:   int(config.ReplicationFactor),
-			AsyncFlushMessages:  int(config.AsyncFlushMessages),
-			TopicConfigMap:      config.KafkaTopicConfigs,
-		})
-		if err != nil {
-			t.Log(config.KafkaUrl)
-			t.Error(err)
-			return
-		}
-		producer.Log(log.New(os.Stdout, "[KAFKA-PRODUCER] ", 0))
+		producer := newTestProducer(ctx, config.KafkaUrl)
 
 		serviceCallCount := map[string]int{}
 
@@ -1239,16 +1185,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			return serviceCallCount[serviceId]
 		}
 
-		err = kafka.NewConsumer(ctx, kafka.ConsumerConfig{
-			KafkaUrl:       config.KafkaUrl,
-			GroupId:        "test-connector-mock",
-			Topic:          "connector",
-			MinBytes:       int(config.KafkaConsumerMinBytes),
-			MaxBytes:       int(config.KafkaConsumerMaxBytes),
-			MaxWait:        maxWait,
-			TopicConfigMap: config.KafkaTopicConfigs,
-			InitTopics:     true,
-		}, func(_ string, msg []byte, time time.Time) error {
+		err = testConsumer(ctx, config.KafkaUrl, "test-connector-mock", "connector", func(msg []byte) error {
 			t.Log(string(msg))
 			message := messages.ProtocolMsg{}
 			err := json.Unmarshal(msg, &message)

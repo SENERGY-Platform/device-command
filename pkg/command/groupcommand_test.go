@@ -19,7 +19,7 @@ package command
 import (
 	"testing"
 
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
 const testMeasuringFunctionId = model.MEASURING_FUNCTION_PREFIX + "temperature"

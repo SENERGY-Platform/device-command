@@ -19,7 +19,7 @@ package interfaces
 import (
 	"context"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
+	"github.com/SENERGY-Platform/device-command/pkg/messages"
 )
 
 type Producer interface {

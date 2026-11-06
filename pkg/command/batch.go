@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
 func (this *Command) Batch(token auth.Token, batch BatchRequest, timeout string, preferEventValue bool) []BatchResultElement {

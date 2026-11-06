@@ -34,8 +34,8 @@ import (
 	"github.com/SENERGY-Platform/device-repository/v2/lib/client"
 	"github.com/SENERGY-Platform/device-repository/v2/lib/database"
 	devicerepomodel "github.com/SENERGY-Platform/device-repository/v2/lib/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/models/go/models"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
 func TestMgwCommandWithTimeoutAuth(t *testing.T) {

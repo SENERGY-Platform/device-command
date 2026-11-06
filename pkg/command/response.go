@@ -17,16 +17,16 @@
 package command
 
 import (
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
+	"github.com/SENERGY-Platform/device-command/pkg/messages"
+	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	"net/http"
 )
 
 func (this *Command) HandleTaskResponse(message messages.ProtocolMsg) (err error) {
 	var output interface{}
-	if message.Metadata.OutputCharacteristic != model.NullCharacteristic.Id && message.Metadata.OutputCharacteristic != "" {
-		output, err = this.marshaller.UnmarshalV2(marshaller.UnmarshallingV2Request{
+	if message.Metadata.OutputCharacteristic != marshallermodel.NullCharacteristic.Id && message.Metadata.OutputCharacteristic != "" {
+		output, err = this.marshaller.UnmarshalV2(interfaces.UnmarshallingV2Request{
 			Service:          message.Metadata.Service,
 			Protocol:         message.Metadata.Protocol,
 			CharacteristicId: message.Metadata.OutputCharacteristic,

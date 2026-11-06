@@ -21,40 +21,81 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com"
-	"github.com/SENERGY-Platform/external-task-worker/lib/com/comswitch"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
-	"github.com/SENERGY-Platform/external-task-worker/util"
+	"github.com/SENERGY-Platform/device-command/pkg/messages"
+	"github.com/SENERGY-Platform/service-commons/pkg/kafka"
 )
 
+// a response that is older than this has no request waiting for it any more; it is skipped
+// unread, so that a consumer that starts behind does not unmarshal a backlog for nobody
+const maxResponseAge = time.Hour
+
 func ComFactory(ctx context.Context, config configuration.Config, responseListener func(msg messages.ProtocolMsg) error, errorListener func(msg messages.ProtocolMsg) error) (producer interfaces.Producer, err error) {
-	//comFactory := kafka.Factory
-	comFactory := comswitch.Factory
-	libConfig := createLibConfig(config)
-	resp := getLibListener(responseListener)
-	errL := getLibListener(errorListener)
+	if !isSet(config.KafkaUrl) {
+		return nil, errors.New("missing kafka_url: the cloud com_impl receives responses only over kafka")
+	}
+	resp := getListener(responseListener)
 	if config.ResponseWorkerCount > 1 {
-		err = comFactory.NewConsumer(ctx, libConfig, getQueuedResponseHandler(ctx, config.ResponseWorkerCount, config.ResponseWorkerCount, resp), errL)
-	} else {
-		err = comFactory.NewConsumer(ctx, libConfig, resp, errL)
+		resp = getQueuedResponseHandler(ctx, config.ResponseWorkerCount, config.ResponseWorkerCount, resp)
 	}
-	if err != nil {
-		return producer, err
+	if isSet(config.ResponseTopic) {
+		err = startConsumer(ctx, config, config.ResponseTopic, resp)
+		if err != nil {
+			return nil, err
+		}
 	}
-	prod := &Producer{}
-	prod.libProducer, err = comFactory.NewProducer(ctx, libConfig)
-	if err != nil {
-		return prod, err
+	if isSet(config.ErrorTopic) && !isHttpHandler(config.ErrorTopic) {
+		err = startConsumer(ctx, config, config.ErrorTopic, getListener(errorListener))
+		if err != nil {
+			return nil, err
+		}
 	}
-	return prod, nil
+	return &Producer{
+		ctx:         ctx,
+		config:      config,
+		writers:     map[string]*kafka.Producer{},
+		knownTopics: map[string]bool{},
+	}, nil
 }
 
+func startConsumer(ctx context.Context, config configuration.Config, topic string, listener func(msg []byte) error) error {
+	slog.Info("consume topic", "topic", topic)
+	if config.InitTopics {
+		err := initTopics(config.KafkaUrl, config.KafkaTopicConfigs, 1, 1, topic)
+		if err != nil {
+			slog.Error("unable to create topic", "topic", topic, "error", err)
+			return err
+		}
+	}
+	return kafka.NewMultiConsumer(ctx, kafka.Config{
+		KafkaUrl:      config.KafkaUrl,
+		ConsumerGroup: config.KafkaConsumerGroup,
+		StartOffset:   kafka.FirstOffset,
+	}, []string{topic}, func(delivery kafka.Message) error {
+		if age := time.Since(delivery.Time); age > maxResponseAge {
+			slog.Warn("skip kafka message older than 1h", "topic", delivery.Topic, "age", age.String())
+			return nil
+		}
+		return listener(delivery.Value)
+	})
+}
+
+// Producer sends a protocol message to the topic named by the handler of its protocol, or by
+// http POST if the handler is an http(s) url.
 type Producer struct {
-	libProducer com.ProducerInterface
+	ctx         context.Context
+	config      configuration.Config
+	mux         sync.Mutex
+	writers     map[string]*kafka.Producer
+	knownTopics map[string]bool
 }
 
 func (this *Producer) SendCommand(msg messages.ProtocolMsg) (err error) {
@@ -62,29 +103,81 @@ func (this *Producer) SendCommand(msg messages.ProtocolMsg) (err error) {
 	if err != nil {
 		return err
 	}
-	return this.libProducer.ProduceWithKey(msg.Metadata.Protocol.Handler, msg.Metadata.Device.Id, string(message))
+	topic := msg.Metadata.Protocol.Handler
+	if isHttpHandler(topic) {
+		return sendHttp(topic, message)
+	}
+	writer, err := this.getWriter(topic)
+	if err != nil {
+		return err
+	}
+	return writer.Produce(msg.Metadata.Device.Id, message)
 }
 
-func getLibListener(listener func(msg messages.ProtocolMsg) error) (result func(msg string) error) {
-	return func(msg string) error {
-		message := messages.ProtocolMsg{}
-		err := json.Unmarshal([]byte(msg), &message)
+func (this *Producer) getWriter(topic string) (*kafka.Producer, error) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+	if this.config.InitTopics && !this.knownTopics[topic] {
+		err := initTopics(this.config.KafkaUrl, this.config.KafkaTopicConfigs, int(this.config.PartitionNum), int(this.config.ReplicationFactor), topic)
 		if err != nil {
-			slog.Error("unable to unmarshal protocol message", "error", err, "msg", msg)
-			return nil //nil return to ensure continued consumption
+			slog.Warn("unable to ensure topic", "topic", topic, "error", err)
+		} else {
+			this.knownTopics[topic] = true
 		}
-		return listener(message)
+	}
+	if writer, ok := this.writers[topic]; ok {
+		return writer, nil
+	}
+	writer, err := kafka.NewProducer(this.ctx, kafka.Config{KafkaUrl: this.config.KafkaUrl}, topic)
+	if err != nil {
+		return nil, err
+	}
+	this.writers[topic] = writer
+	return writer, nil
+}
+
+func sendHttp(url string, message []byte) error {
+	resp, err := http.Post(url, "application/json", strings.NewReader(string(message)))
+	if err != nil {
+		slog.Error("unable to send command by http", "url", url, "error", err)
+		return err
+	}
+	defer resp.Body.Close()
+	respMsg, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		err = errors.New("http producer: " + resp.Status + " " + string(respMsg))
+		slog.Error("unable to send command by http", "url", url, "error", err)
+		return err
+	}
+	return nil
+}
+
+// getListener never returns an error: a message that cannot be read or handled is logged and
+// skipped. The consumer would otherwise retry it and hold back every response behind it.
+func getListener(listener func(msg messages.ProtocolMsg) error) func(msg []byte) error {
+	return func(msg []byte) error {
+		message := messages.ProtocolMsg{}
+		err := json.Unmarshal(msg, &message)
+		if err != nil {
+			slog.Error("unable to unmarshal protocol message", "error", err, "msg", string(msg))
+			return nil
+		}
+		err = listener(message)
+		if err != nil {
+			slog.Error("unable to handle protocol message", "error", err, "msg", string(msg))
+		}
+		return nil
 	}
 }
 
-func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize int64, respHandler func(msg string) error) func(msg string) (err error) {
-	queue := make(chan string, queueSize)
+func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize int64, respHandler func(msg []byte) error) func(msg []byte) (err error) {
+	queue := make(chan []byte, queueSize)
 	for i := int64(0); i < workerCount; i++ {
 		go func() {
 			for msg := range queue {
 				err := respHandler(msg)
 				if err != nil {
-					slog.Error("unable to handle response", "error", err, "msg", msg)
+					slog.Error("unable to handle response", "error", err, "msg", string(msg))
 				}
 			}
 		}()
@@ -93,7 +186,7 @@ func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize 
 		<-ctx.Done()
 		close(queue)
 	}()
-	return func(msg string) (err error) {
+	return func(msg []byte) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = errors.New(fmt.Sprint(r))
@@ -104,33 +197,10 @@ func getQueuedResponseHandler(ctx context.Context, workerCount int64, queueSize 
 	}
 }
 
-func createLibConfig(config configuration.Config) util.Config {
-	return util.Config{
-		Debug:                           config.Debug,
-		DeviceRepoUrl:                   config.DeviceRepositoryUrl,
-		CompletionStrategy:              util.PESSIMISTIC,
-		OptimisticTaskCompletionTimeout: 100,
-		InitTopics:                      config.InitTopics,
-		KafkaUrl:                        config.KafkaUrl,
-		KafkaConsumerGroup:              config.KafkaConsumerGroup,
-		ResponseTopic:                   config.ResponseTopic,
-		MarshallerUrl:                   config.MarshallerUrl,
-		GroupScheduler:                  config.GroupScheduler,
-		MetadataResponseTo:              config.MetadataResponseTo,
-		AsyncFlushFrequency:             config.AsyncFlushFrequency,
-		AsyncCompression:                config.AsyncCompression,
-		SyncCompression:                 config.SyncCompression,
-		Sync:                            config.Sync,
-		SyncIdempotent:                  config.SyncIdempotent,
-		PartitionNum:                    config.PartitionNum,
-		ReplicationFactor:               config.ReplicationFactor,
-		AsyncFlushMessages:              config.AsyncFlushMessages,
-		KafkaConsumerMaxWait:            config.KafkaConsumerMaxWait,
-		KafkaConsumerMinBytes:           config.KafkaConsumerMinBytes,
-		KafkaConsumerMaxBytes:           config.KafkaConsumerMaxBytes,
-		ResponseWorkerCount:             config.ResponseWorkerCount,
-		MetadataErrorTo:                 config.MetadataErrorTo,
-		ErrorTopic:                      config.ErrorTopic,
-		KafkaTopicConfigs:               config.KafkaTopicConfigs,
-	}
+func isSet(value string) bool {
+	return value != "" && value != "-"
+}
+
+func isHttpHandler(handler string) bool {
+	return strings.HasPrefix(handler, "http://") || strings.HasPrefix(handler, "https://")
 }

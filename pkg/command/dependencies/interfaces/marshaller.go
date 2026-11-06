@@ -18,17 +18,29 @@ package interfaces
 
 import (
 	"context"
+
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
+	"github.com/SENERGY-Platform/marshaller/lib/api/messages"
+	"github.com/SENERGY-Platform/marshaller/lib/configurables"
+	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
+// the request types are the ones of the marshaller itself, so that a field added there does
+// not have to be repeated here to be usable
+
+type MarshallingV2RequestData = marshallermodel.MarshallingV2RequestData
+
+type UnmarshallingV2Request = messages.UnmarshallingV2Request
+
+type Configurable = configurables.Configurable
+
 type Marshaller interface {
-	MarshalFromServiceAndProtocol(characteristicId string, service model.Service, protocol model.Protocol, characteristicData interface{}, configurables []marshaller.Configurable) (result map[string]string, err error)
+	MarshalFromServiceAndProtocol(characteristicId string, service model.Service, protocol model.Protocol, characteristicData interface{}, configurables []Configurable) (result map[string]string, err error)
 	UnmarshalFromServiceAndProtocol(characteristicId string, service model.Service, protocol model.Protocol, message map[string]string, hints []string) (characteristicData interface{}, err error)
 
-	MarshalV2(service model.Service, protocol model.Protocol, data []marshaller.MarshallingV2RequestData) (result map[string]string, err error)
-	UnmarshalV2(request marshaller.UnmarshallingV2Request) (characteristicData interface{}, err error)
+	MarshalV2(service model.Service, protocol model.Protocol, data []MarshallingV2RequestData) (result map[string]string, err error)
+	UnmarshalV2(request UnmarshallingV2Request) (characteristicData interface{}, err error)
 }
 
 type MarshallerFactory func(ctx context.Context, config configuration.Config, iot Iot) (Marshaller, error)

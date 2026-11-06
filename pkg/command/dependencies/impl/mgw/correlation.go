@@ -18,7 +18,7 @@ package mgw
 
 import (
 	"errors"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
+	"github.com/SENERGY-Platform/device-command/pkg/messages"
 	"sync"
 )
 

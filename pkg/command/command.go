@@ -25,8 +25,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command/metrics"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/register"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
+	model "github.com/SENERGY-Platform/models/go/models"
 	"net/http"
 	"strings"
 )
@@ -36,7 +35,7 @@ type Command struct {
 	timescale  interfaces.Timescale
 	register   *register.Register
 	config     configuration.Config
-	marshaller marshaller.Interface
+	marshaller interfaces.Marshaller
 	producer   interfaces.Producer
 	metrics    *metrics.Metrics
 }

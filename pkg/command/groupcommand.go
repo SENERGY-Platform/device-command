@@ -23,8 +23,8 @@ import (
 	"sync"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	marshallermodel "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
 func (this *Command) GroupCommand(token auth.Token, groupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {

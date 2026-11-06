@@ -17,16 +17,15 @@
 package command
 
 import (
+	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
-	"github.com/SENERGY-Platform/external-task-worker/lib/messages"
-	"github.com/SENERGY-Platform/external-task-worker/util"
+	"github.com/SENERGY-Platform/device-command/pkg/messages"
+	model "github.com/SENERGY-Platform/models/go/models"
 	"github.com/google/uuid"
 )
 
@@ -96,12 +95,12 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 	var outputFunctionId string
 	var outputAspectNodes []model.AspectNode
 
-	data := []marshaller.MarshallingV2RequestData{}
+	data := []interfaces.MarshallingV2RequestData{}
 
 	if isControllingFunction(function) {
 		inputCharacteristicId = characteristicId
 		if input != nil {
-			data = []marshaller.MarshallingV2RequestData{
+			data = []interfaces.MarshallingV2RequestData{
 				{
 					Value:            input,
 					CharacteristicId: inputCharacteristicId,
@@ -127,7 +126,7 @@ func (this *Command) deviceCommand(token auth.Token, deviceId string, serviceId 
 	protocolMessage := messages.ProtocolMsg{
 		TaskInfo: messages.TaskInfo{
 			TaskId:   taskId,
-			Time:     strconv.FormatInt(util.TimeNow().Unix(), 10),
+			Time:     strconv.FormatInt(time.Now().Unix(), 10),
 			TenantId: token.GetUserId(),
 		},
 		Request: messages.ProtocolRequest{

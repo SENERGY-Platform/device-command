@@ -21,8 +21,8 @@ import (
 	"errors"
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
 	"github.com/SENERGY-Platform/models/go/models"
+	model "github.com/SENERGY-Platform/models/go/models"
 	"time"
 )
 

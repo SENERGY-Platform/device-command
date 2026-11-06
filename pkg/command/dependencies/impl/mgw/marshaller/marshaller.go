@@ -28,13 +28,12 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
 	"github.com/SENERGY-Platform/device-command/pkg/command/dependencies/interfaces"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
-	"github.com/SENERGY-Platform/external-task-worker/lib/devicerepository/model"
-	"github.com/SENERGY-Platform/external-task-worker/lib/marshaller"
 	"github.com/SENERGY-Platform/marshaller/lib/config"
 	marshaller_service_configurables "github.com/SENERGY-Platform/marshaller/lib/configurables"
 	marshaller_service "github.com/SENERGY-Platform/marshaller/lib/marshaller"
 	marshaller_service_model "github.com/SENERGY-Platform/marshaller/lib/marshaller/model"
 	marshaller_service_v2 "github.com/SENERGY-Platform/marshaller/lib/marshaller/v2"
+	model "github.com/SENERGY-Platform/models/go/models"
 )
 
 func NewMarshaller(ctx context.Context, conf configuration.Config, iot interfaces.Iot) (*Marshaller, error) {
@@ -65,7 +64,7 @@ type Marshaller struct {
 	v2         *marshaller_service_v2.Marshaller
 }
 
-func (this *Marshaller) MarshalFromServiceAndProtocol(characteristicId string, service model.Service, protocol model.Protocol, characteristicData interface{}, configurables []marshaller.Configurable) (result map[string]string, err error) {
+func (this *Marshaller) MarshalFromServiceAndProtocol(characteristicId string, service model.Service, protocol model.Protocol, characteristicData interface{}, configurables []interfaces.Configurable) (result map[string]string, err error) {
 	mockService := marshaller_service_model.Service{}
 	mockProtocol := marshaller_service_model.Protocol{}
 	mockConfigurables := []marshaller_service_configurables.Configurable{}
@@ -112,7 +111,7 @@ func jsonCast(in interface{}, out interface{}) (err error) {
 	return nil
 }
 
-func (this *Marshaller) MarshalV2(service model.Service, protocol model.Protocol, data []marshaller.MarshallingV2RequestData) (result map[string]string, err error) {
+func (this *Marshaller) MarshalV2(service model.Service, protocol model.Protocol, data []interfaces.MarshallingV2RequestData) (result map[string]string, err error) {
 	mockService := marshaller_service_model.Service{}
 	mockProtocol := marshaller_service_model.Protocol{}
 	mockData := []marshaller_service_model.MarshallingV2RequestData{}
@@ -131,7 +130,7 @@ func (this *Marshaller) MarshalV2(service model.Service, protocol model.Protocol
 	return this.v2.Marshal(mockProtocol, mockService, mockData)
 }
 
-func (this *Marshaller) UnmarshalV2(request marshaller.UnmarshallingV2Request) (result interface{}, err error) {
+func (this *Marshaller) UnmarshalV2(request interfaces.UnmarshallingV2Request) (result interface{}, err error) {
 	mockProtocol := marshaller_service_model.Protocol{}
 	err = jsonCast(request.Protocol, &mockProtocol)
 	if err != nil {

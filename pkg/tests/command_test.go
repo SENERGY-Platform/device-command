@@ -1414,7 +1414,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 				DeviceId:   "color_event",
 				ServiceId:  "urn:infai:ses:service:color_event",
 			},
-		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: unexpected statuscode 404: not found\n"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":[true]}]`))
+		}, 200, `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: unexpected statuscode 404: not found\n"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}],"time":"2026-11-06T12:00:00Z"},{"status_code":200,"message":[true],"time":"2026-11-06T12:00:00Z"},{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":200,"message":[true],"time":"2026-11-06T12:00:00Z"}]`))
 
 		zeroTimestamp := time.UnixMilli(0).Format(time.RFC3339)
 

@@ -36,10 +36,10 @@ import (
 // mgw-last-value started. A client may then ask the platform instead.
 const StatusMissingLastValue = 513
 
-func (this *Command) GetLastEventValue(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspectNodes []model.AspectNode, timeout time.Duration) (code int, result interface{}) {
-	output, err, code := this.getLastEventMessage(ctx, token, device, service, protocol, timeout)
+func (this *Command) GetLastEventValue(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, characteristicId string, functionId string, aspectNodes []model.AspectNode, timeout time.Duration) (code int, result interface{}, valueTime string) {
+	output, valueTime, err, code := this.getLastEventMessage(ctx, token, device, service, protocol, timeout)
 	if err != nil {
-		return code, "unable to get event value: " + err.Error()
+		return code, "unable to get event value: " + err.Error(), ""
 	}
 	req := marshaller.UnmarshalRequest{
 		Service:          service,
@@ -52,21 +52,21 @@ func (this *Command) GetLastEventValue(ctx context.Context, token auth.Token, de
 	temp, err := this.marshaller.Unmarshal(ctx, req)
 	if err != nil {
 		this.config.GetLogger().Debug("unable to unmarshal event value", "error", err, "UnmarshallingV2Request", fmt.Sprintf("%#v", req))
-		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error()
+		return http.StatusInternalServerError, "unable to unmarshal event value: " + err.Error(), ""
 	}
-	return 200, temp
+	return 200, temp, valueTime
 }
 
-func (this *Command) getLastEventMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (result map[string]string, err error, code int) {
+func (this *Command) getLastEventMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (result map[string]string, valueTime string, err error, code int) {
 	response, err := this.lastValues.LastMessage(ctx, token, device, service, protocol, timeout)
 	if errors.Is(err, lastvalue.ErrMissing) {
-		return result, err, StatusMissingLastValue
+		return result, "", err, StatusMissingLastValue
 	}
 	if err != nil {
-		return result, err, http.StatusInternalServerError
+		return result, "", err, http.StatusInternalServerError
 	}
-	result, err, code = this.useProtocolSerialization(service, protocol, response)
-	return result, err, code
+	result, err, code = this.useProtocolSerialization(service, protocol, response.Value)
+	return result, response.Time, err, code
 }
 
 func (this *Command) useProtocolSerialization(service model.Service, protocol model.Protocol, lastMsg map[string]interface{}) (result map[string]string, err error, code int) {

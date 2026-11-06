@@ -17,10 +17,13 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -394,7 +397,7 @@ func testMgwCommandWithTimeoutAuth(t *testing.T) {
 	}, 200, "[13,13,13]"))
 
 	expectedDeviceBatchResponse := `[{"status_code":200,"message":[null]},{"status_code":200,"message":[13]},{"status_code":408,"message":"timeout"},{"status_code":500,"message":"unable to load function: unexpected statuscode 404: not found\n"},{"status_code":200,"message":[null]},{"status_code":200,"message":[{"b":158,"g":166,"r":50}]},{"status_code":200,"message":[true]}]`
-	t.Run("device batch", sendCommandBatch(config, command.BatchRequest{
+	t.Run("device batch", sendCommandBatchIgnoringTime(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
 			Input:      21,
@@ -440,7 +443,7 @@ func testMgwCommandWithTimeoutAuth(t *testing.T) {
 
 	zeroTimestamp := time.UnixMilli(0).Format(time.RFC3339)
 
-	t.Run("new timestamp", sendCommandBatch(config, command.BatchRequest{
+	t.Run("new timestamp", sendCommandBatchIgnoringTime(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290",
 			DeviceId:   "urn:infai:ses:device:timestamp-test",
@@ -862,7 +865,7 @@ func TestMgwCommand(t *testing.T) {
 		GroupId:    "group_temperature",
 	}, 200, "[13,13,13]"))
 
-	t.Run("device batch", sendCommandBatch(config, command.BatchRequest{
+	t.Run("device batch", sendCommandBatchIgnoringTime(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:controlling-function:99240d90-02dd-4d4f-a47c-069cfe77629c",
 			Input:      21,
@@ -908,7 +911,7 @@ func TestMgwCommand(t *testing.T) {
 
 	zeroTimestamp := time.UnixMilli(0).Format(time.RFC3339)
 
-	t.Run("new timestamp", sendCommandBatch(config, command.BatchRequest{
+	t.Run("new timestamp", sendCommandBatchIgnoringTime(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:measuring-function:3b4e0766-0d67-4658-b249-295902cd3290",
 			DeviceId:   "urn:infai:ses:device:timestamp-test",
@@ -1196,7 +1199,7 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 		ServiceId:  "urn:infai:ses:service:status_event",
 	}, 513, `"unable to get event value: missing last value in mgw-last-value"`))
 
-	t.Run("batch", sendCommandBatch(config, command.BatchRequest{
+	t.Run("batch", sendCommandBatchIgnoringTime(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 			DeviceId:   "status_event",
@@ -1426,7 +1429,7 @@ func TestShellyError(t *testing.T) {
 		ServiceId:  "urn:infai:ses:service:940fd269-27f7-4f2e-afbf-eddbf0feb4c8",
 	}, 513, `"unable to get event value: missing last value in mgw-last-value"`))
 
-	t.Run("batch", sendCommandBatch(config, command.BatchRequest{
+	t.Run("batch", sendCommandBatchIgnoringTime(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:measuring-function:20d3c1d3-77d7-4181-a9f3-b487add58cd0",
 			DeviceId:   "status_event",
@@ -1568,7 +1571,7 @@ func TestCharacteristicError(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	t.Run("batch", sendCommandBatch(config, command.BatchRequest{
+	t.Run("batch", sendCommandBatchIgnoringTime(config, command.BatchRequest{
 		{
 			FunctionId: "urn:infai:ses:controlling-function:ced44f01-7328-43e3-8db0-ecd12f448758",
 			DeviceId:   "urn:infai:ses:device:79fa231c-45d9-4266-b5fb-2c051bfd8c0d",
@@ -1578,4 +1581,44 @@ func TestCharacteristicError(t *testing.T) {
 		},
 	}, 200, `[{"status_code":200,"message":[null]}]`))
 
+}
+
+var batchTime = regexp.MustCompile(`,"time":"[^"]*"`)
+
+// sendCommandBatchIgnoringTime compares like sendCommandBatch, but without the time of values read
+// from mgw-last-value, which is the receipt time of the real container.
+func sendCommandBatchIgnoringTime(config configuration.Config, commandMessage command.BatchRequest, expectedCode int, expectedContent string) func(t *testing.T) {
+	return func(t *testing.T) {
+		buff := &bytes.Buffer{}
+		err := json.NewEncoder(buff).Encode(commandMessage)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req, err := http.NewRequest("POST", "http://localhost:"+config.ServerPort+"/commands/batch?timeout=15s", buff)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req.Header.Set("Authorization", testToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer resp.Body.Close()
+		actualContent, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if resp.StatusCode != expectedCode {
+			t.Error(resp.StatusCode, string(actualContent))
+			return
+		}
+		actual := batchTime.ReplaceAllString(strings.TrimSpace(string(actualContent)), "")
+		if actual != expectedContent {
+			t.Error("\n" + expectedContent + "\n" + actual)
+		}
+	}
 }

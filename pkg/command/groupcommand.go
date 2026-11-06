@@ -50,7 +50,7 @@ func (this *Command) GroupCommand(ctx context.Context, token auth.Token, groupId
 		wg.Add(1)
 		go func(sub SubCommand) {
 			defer wg.Done()
-			tempCode, temp := this.deviceCommand(ctx, token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectIds, input, timeout, preferEventValue, characteristicId)
+			tempCode, temp, _ := this.deviceCommand(ctx, token, sub.DeviceId, sub.ServiceId, sub.FunctionId, sub.AspectIds, input, timeout, preferEventValue, characteristicId)
 			this.config.GetLogger().Debug("group sub result", "user", token.GetUserId(), "code", tempCode, "result", fmt.Sprintf("%#v", temp))
 			mux.Lock()
 			defer mux.Unlock()

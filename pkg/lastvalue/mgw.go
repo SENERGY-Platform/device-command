@@ -68,13 +68,13 @@ type mgwResponse struct {
 
 // LastMessage returns the value under the name of the output content variable that is sent in
 // the configured protocol segment.
-func (this *Mgw) LastMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (map[string]interface{}, error) {
+func (this *Mgw) LastMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (Message, error) {
 	list, err := this.query(ctx, token, []mgwRequest{{DeviceId: device.LocalId, ServiceId: service.LocalId}}, timeout)
 	if err != nil {
-		return nil, err
+		return Message{}, err
 	}
 	if len(list) != 1 || list[0].Time == nil {
-		return nil, ErrMissing
+		return Message{}, ErrMissing
 	}
 	segmentId := ""
 	for _, segment := range protocol.ProtocolSegments {
@@ -90,7 +90,7 @@ func (this *Mgw) LastMessage(ctx context.Context, token auth.Token, device model
 			break
 		}
 	}
-	return map[string]interface{}{variableName: list[0].Value}, nil
+	return Message{Value: map[string]interface{}{variableName: list[0].Value}, Time: normalizeTime(*list[0].Time)}, nil
 }
 
 func (this *Mgw) query(ctx context.Context, token auth.Token, request []mgwRequest, timeout time.Duration) (result []mgwResponse, err error) {

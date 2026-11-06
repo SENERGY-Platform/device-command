@@ -78,4 +78,7 @@ func (this BatchRequest) Validate() error {
 type BatchResultElement struct {
 	StatusCode int         `json:"status_code"`
 	Message    interface{} `json:"message"`
+	// Time is when a value read from the last values was stored (RFC3339, UTC); absent for an
+	// answer of the device and for group commands.
+	Time string `json:"time,omitempty"`
 }

@@ -53,8 +53,9 @@ func (this *Command) Batch(ctx context.Context, token auth.Token, batch BatchReq
 				defer wg.Done()
 				var code int
 				var temp interface{}
+				var valueTime string
 				if cmd.DeviceId != "" && cmd.ServiceId != "" {
-					code, temp = this.DeviceCommand(ctx, token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectIds, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
+					code, temp, valueTime = this.deviceCommandWithTime(ctx, token, cmd.DeviceId, cmd.ServiceId, cmd.FunctionId, cmd.AspectIds, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				} else if cmd.GroupId != "" {
 					code, temp = this.GroupCommand(ctx, token, cmd.GroupId, cmd.FunctionId, cmd.AspectIds, cmd.DeviceClassId, cmd.Input, timeout, preferEventValue, cmd.CharacteristicId)
 				}
@@ -67,6 +68,7 @@ func (this *Command) Batch(ctx context.Context, token auth.Token, batch BatchReq
 					result[index] = BatchResultElement{
 						StatusCode: code,
 						Message:    temp,
+						Time:       valueTime,
 					}
 				}
 				return

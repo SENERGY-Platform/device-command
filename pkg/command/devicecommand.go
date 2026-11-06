@@ -35,14 +35,21 @@ import (
 )
 
 func (this *Command) DeviceCommand(ctx context.Context, token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
-	code, resp = this.deviceCommand(ctx, token, deviceId, serviceId, functionId, aspectIds, input, timeout, preferEventValue, characteristicId)
-	if code == http.StatusOK {
-		resp = []interface{}{resp}
-	}
+	code, resp, _ = this.deviceCommandWithTime(ctx, token, deviceId, serviceId, functionId, aspectIds, input, timeout, preferEventValue, characteristicId)
 	return code, resp
 }
 
-func (this *Command) deviceCommand(ctx context.Context, token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+// deviceCommandWithTime also returns when an answer read from the last values was stored (RFC3339),
+// empty for an answer of the device itself.
+func (this *Command) deviceCommandWithTime(ctx context.Context, token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}, valueTime string) {
+	code, resp, valueTime = this.deviceCommand(ctx, token, deviceId, serviceId, functionId, aspectIds, input, timeout, preferEventValue, characteristicId)
+	if code == http.StatusOK {
+		resp = []interface{}{resp}
+	}
+	return code, resp, valueTime
+}
+
+func (this *Command) deviceCommand(ctx context.Context, token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}, valueTime string) {
 	ctx, span := tracing.Start(ctx, "device command",
 		attribute.String("device_id", deviceId),
 		attribute.String("service_id", serviceId),
@@ -60,32 +67,32 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 
 	device, err := this.repo.GetDevice(ctx, token.Jwt(), deviceId)
 	if err != nil {
-		return http.StatusInternalServerError, "unable to load device: " + err.Error()
+		return http.StatusInternalServerError, "unable to load device: " + err.Error(), ""
 	}
 	service, err := this.repo.GetService(ctx, token.Jwt(), device, serviceId)
 	if err != nil {
-		return http.StatusInternalServerError, "unable to load service: " + err.Error()
+		return http.StatusInternalServerError, "unable to load service: " + err.Error(), ""
 	}
 	function, err := this.repo.GetFunction(ctx, functionId)
 	if err != nil {
-		return http.StatusInternalServerError, "unable to load function: " + err.Error()
+		return http.StatusInternalServerError, "unable to load function: " + err.Error(), ""
 	}
 	if characteristicId == "" && function.ConceptId != "" {
 		concept, err := this.repo.GetConcept(ctx, function.ConceptId)
 		if err != nil {
-			return http.StatusInternalServerError, "unable to load concept: " + err.Error()
+			return http.StatusInternalServerError, "unable to load concept: " + err.Error(), ""
 		}
 		characteristicId = concept.BaseCharacteristicId
 	}
 	protocol, err := this.repo.GetProtocol(ctx, token.Jwt(), service.ProtocolId)
 	if err != nil {
-		return http.StatusInternalServerError, "unable to load protocol: " + err.Error()
+		return http.StatusInternalServerError, "unable to load protocol: " + err.Error(), ""
 	}
 	aspectNodes := []model.AspectNode{}
 	for _, aspectId := range aspectIds {
 		aspectNode, err := this.repo.GetAspectNode(ctx, aspectId)
 		if err != nil {
-			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error()
+			return http.StatusInternalServerError, "unable to load aspect node: " + err.Error(), ""
 		}
 		aspectNodes = append(aspectNodes, aspectNode)
 	}
@@ -117,7 +124,7 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 
 	marshalledInput, err := this.marshaller.Marshal(ctx, service, protocol, data)
 	if err != nil {
-		return http.StatusInternalServerError, "unable to marshal input: " + err.Error()
+		return http.StatusInternalServerError, "unable to marshal input: " + err.Error(), ""
 	}
 
 	taskId := uuid.New().String()
@@ -154,7 +161,7 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 	err = this.transport.Send(ctx, msg)
 	if err != nil {
 		this.config.GetLogger().Error("unable to produce command message", "error", err)
-		return http.StatusInternalServerError, "unable to produce message"
+		return http.StatusInternalServerError, "unable to produce message", ""
 	}
 	span.AddEvent("command sent")
 
@@ -162,10 +169,10 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 	case reply := <-replies:
 		span.AddEvent("reply received", trace.WithAttributes(attribute.Bool("failed", reply.Failed)))
 		if reply.Failed {
-			return http.StatusInternalServerError, reply.Output
+			return http.StatusInternalServerError, reply.Output, ""
 		}
 		if outputCharacteristicId == "" || outputCharacteristicId == marshallermodel.NullCharacteristic.Id {
-			return http.StatusOK, nil
+			return http.StatusOK, nil, ""
 		}
 		output, err := this.marshaller.Unmarshal(ctx, marshaller.UnmarshalRequest{
 			Service:          service,
@@ -176,11 +183,11 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 			AspectNodes:      outputAspectNodes,
 		})
 		if err != nil {
-			return http.StatusInternalServerError, err.Error()
+			return http.StatusInternalServerError, err.Error(), ""
 		}
-		return http.StatusOK, output
+		return http.StatusOK, output, ""
 	case <-time.After(timeoutDuration):
-		return http.StatusRequestTimeout, "timeout"
+		return http.StatusRequestTimeout, "timeout", ""
 	}
 }
 

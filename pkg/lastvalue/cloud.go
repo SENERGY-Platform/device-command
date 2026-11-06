@@ -36,31 +36,39 @@ type Cloud struct {
 	url string
 }
 
-func (this *Cloud) LastMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (map[string]interface{}, error) {
+func (this *Cloud) LastMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (Message, error) {
 	query := url.Values{}
 	query.Set("device_id", device.Id)
 	query.Set("service_id", service.Id)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, this.url+"/last-message?"+query.Encode(), nil)
 	if err != nil {
-		return nil, err
+		return Message{}, err
 	}
 	req.Header.Set("Authorization", token.Jwt())
 	err = tracing.Inject(ctx, req)
 	if err != nil {
-		return nil, err
+		return Message{}, err
 	}
 	resp, err := (&http.Client{Timeout: timeout}).Do(req)
 	if err != nil {
-		return nil, err
+		return Message{}, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		temp, _ := io.ReadAll(resp.Body)
-		return nil, errors.New(strings.TrimSpace(string(temp)))
+		return Message{}, errors.New(strings.TrimSpace(string(temp)))
 	}
 	result := struct {
+		Time  time.Time              `json:"time"`
 		Value map[string]interface{} `json:"value"`
 	}{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
-	return result.Value, err
+	if err != nil {
+		return Message{}, err
+	}
+	message := Message{Value: result.Value}
+	if !result.Time.IsZero() {
+		message.Time = result.Time.UTC().Format(time.RFC3339Nano)
+	}
+	return message, nil
 }

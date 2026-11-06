@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
-	"time"
 )
 
 type TimescaleMockRequest struct {
@@ -62,7 +61,7 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 		}
 		result := []TimescaleMockResponse{}
 
-		now := time.Now().String()
+		now := lastMessageTime
 		for _, req := range msg {
 			if req.ColumnName != "" {
 				http.Error(writer, "test expects empty column in mgw last value request", http.StatusBadRequest)
@@ -90,6 +89,10 @@ func timescaleEnv(initialConfig configuration.Config, ctx context.Context, wg *s
 	return config, nil
 }
 
+// lastMessageTime is the stored time of every mocked last message, fixed so batch answers can be
+// compared as text.
+const lastMessageTime = "2026-11-06T12:00:00Z"
+
 type LastMessageResponse struct {
 	Time  string                 `json:"time"`
 	Value map[string]interface{} `json:"value"`
@@ -106,7 +109,7 @@ func timescaleCloudEnv(initialConfig configuration.Config, ctx context.Context, 
 			}
 		}()
 		return LastMessageResponse{
-			Time:  time.Now().UTC().Format(time.RFC3339),
+			Time:  lastMessageTime,
 			Value: values[deviceId][serviceId],
 		}
 	}

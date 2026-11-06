@@ -32,9 +32,25 @@ import (
 // started. A client may then ask the platform instead.
 var ErrMissing = errors.New("missing last value in mgw-last-value")
 
-// Reader returns the last message as a map from content variable name to value.
+// Message is the last message of a service. Value maps the content variable name to its value;
+// Time is when the message was stored, RFC3339 in UTC, empty if the source does not say.
+type Message struct {
+	Value map[string]interface{}
+	Time  string
+}
+
+// Reader returns the last message of a service.
 type Reader interface {
-	LastMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (map[string]interface{}, error)
+	LastMessage(ctx context.Context, token auth.Token, device model.Device, service model.Service, protocol model.Protocol, timeout time.Duration) (Message, error)
+}
+
+// normalizeTime returns t as RFC3339 in UTC, or t unchanged if it is no RFC3339 time.
+func normalizeTime(t string) string {
+	parsed, err := time.Parse(time.RFC3339Nano, t)
+	if err != nil {
+		return t
+	}
+	return parsed.UTC().Format(time.RFC3339Nano)
 }
 
 // New returns the timescale-wrapper of the platform, or mgw-last-value with timescale_impl "mgw".

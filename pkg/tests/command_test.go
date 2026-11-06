@@ -1193,6 +1193,10 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 				t.Error(err)
 				return nil
 			}
+			//each instance reads its own reply topics, so that instances do not take each other's replies
+			if message.Metadata.ResponseTo != "device-command-response"+scalingSuffix || message.Metadata.ErrorTo != "device-command-errors"+scalingSuffix {
+				t.Errorf("reply topics %q and %q without the scaling suffix %q", message.Metadata.ResponseTo, message.Metadata.ErrorTo, scalingSuffix)
+			}
 			metadataMux.Lock()
 			lastMetadata[message.Metadata.Service.Id] = message.Metadata
 			metadataMux.Unlock()

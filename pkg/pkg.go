@@ -33,6 +33,7 @@ import (
 // Start runs the service until ctx is done. Every dependency picks its cloud or gateway variant by
 // its own config switch: iot_impl, marshaller_impl, timescale_impl and com_impl.
 func Start(ctx context.Context, config configuration.Config) error {
+	config = config.WithScalingSuffix()
 	err := tracing.Init(ctx, config.OtelEndpoint)
 	if err != nil {
 		config.GetLogger().Warn("unable to init open-telemetry, continuing without tracing", "error", err)

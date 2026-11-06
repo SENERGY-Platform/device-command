@@ -114,6 +114,17 @@ func Load(location string) (config Config, err error) {
 	return config, err
 }
 
+// WithScalingSuffix appends topic_suffix_for_scaling to the reply topics, so that every instance
+// reads replies only to its own commands. Instances of a scaled deployment share the consumer group,
+// and on a shared topic they would take each other's replies.
+func (this Config) WithScalingSuffix() Config {
+	this.MetadataResponseTo = this.MetadataResponseTo + this.TopicSuffixForScaling
+	this.MetadataErrorTo = this.MetadataErrorTo + this.TopicSuffixForScaling
+	this.ResponseTopic = this.ResponseTopic + this.TopicSuffixForScaling
+	this.ErrorTopic = this.ErrorTopic + this.TopicSuffixForScaling
+	return this
+}
+
 func (this Config) AuthEnabled() bool {
 	return this.AuthEndpoint != "" && this.AuthEndpoint != "-"
 }

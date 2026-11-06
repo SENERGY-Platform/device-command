@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/SENERGY-Platform/converter v0.0.14
 	github.com/SENERGY-Platform/device-repository/v3 v3.9.1
+	github.com/SENERGY-Platform/gin-middleware v0.14.3
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.8.2
 	github.com/SENERGY-Platform/marshaller v0.4.1
 	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.4
@@ -16,6 +17,9 @@ require (
 	github.com/prometheus/client_golang v1.25.0
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/testcontainers/testcontainers-go v0.40.0
+	go.opentelemetry.io/otel v1.47.0
+	go.opentelemetry.io/otel/sdk v1.47.0
+	go.opentelemetry.io/otel/trace v1.47.0
 )
 
 require (
@@ -26,7 +30,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/RyanCarrier/dijkstra v1.4.0 // indirect
 	github.com/SENERGY-Platform/developer-notifications v0.0.6 // indirect
-	github.com/SENERGY-Platform/gin-middleware v0.14.3 // indirect
 	github.com/SENERGY-Platform/go-env-loader v0.5.3 // indirect
 	github.com/SENERGY-Platform/go-service-base/config-hdl v1.2.0 // indirect
 	github.com/SENERGY-Platform/permissions-v2 v0.0.47 // indirect
@@ -128,13 +131,10 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.69.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo v0.69.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
-	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.44.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
-	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/arch v0.27.0 // indirect

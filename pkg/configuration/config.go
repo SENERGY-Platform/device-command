@@ -89,6 +89,9 @@ type Config struct {
 
 	InitTopics bool `json:"init_topics"`
 
+	//collector of the traces; empty selects the default of gin-middleware/otelx, "off" disables tracing
+	OtelEndpoint string `json:"otel_endpoint"`
+
 	LogLevel string       `json:"log_level"`
 	logger   *slog.Logger `json:"-"`
 }

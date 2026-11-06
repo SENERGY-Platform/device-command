@@ -19,6 +19,8 @@ package command
 import (
 	"context"
 	"fmt"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
+	"go.opentelemetry.io/otel/attribute"
 	"net/http"
 	"sort"
 	"sync"
@@ -29,10 +31,16 @@ import (
 )
 
 func (this *Command) GroupCommand(ctx context.Context, token auth.Token, groupId string, functionId string, aspectIds []string, deviceClassId string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+	ctx, span := tracing.Start(ctx, "group command",
+		attribute.String("device_group_id", groupId),
+		attribute.String("function_id", functionId),
+		attribute.StringSlice("aspect_ids", aspectIds))
+	defer func() { tracing.EndWithStatus(span, code, resp) }()
 	subTasks, err := this.GetSubTasks(ctx, token.Jwt(), groupId, functionId, aspectIds, deviceClassId, input)
 	if err != nil {
 		return http.StatusInternalServerError, err.Error()
 	}
+	span.SetAttributes(attribute.Int("device_commands", len(subTasks)))
 	wg := sync.WaitGroup{}
 	mux := sync.Mutex{}
 	results := []interface{}{}

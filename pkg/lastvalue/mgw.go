@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
 	model "github.com/SENERGY-Platform/models/go/models"
 )
 
@@ -103,6 +104,10 @@ func (this *Mgw) query(ctx context.Context, token auth.Token, request []mgwReque
 		return nil, err
 	}
 	req.Header.Set("Authorization", token.Jwt())
+	err = tracing.Inject(ctx, req)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := (&http.Client{Timeout: timeout}).Do(req)
 	if err != nil {
 		slog.Error("unable to query /last-values", "error", err)

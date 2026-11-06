@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/device-command/pkg/auth"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
 	model "github.com/SENERGY-Platform/models/go/models"
 )
 
@@ -44,6 +45,10 @@ func (this *Cloud) LastMessage(ctx context.Context, token auth.Token, device mod
 		return nil, err
 	}
 	req.Header.Set("Authorization", token.Jwt())
+	err = tracing.Inject(ctx, req)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := (&http.Client{Timeout: timeout}).Do(req)
 	if err != nil {
 		return nil, err

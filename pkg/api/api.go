@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"errors"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
 	"log"
 	"net/http"
 	"strings"
@@ -65,7 +66,8 @@ func NewHandler(config configuration.Config, cmd Command, metrics *metrics.Metri
 	mux.Handle("POST /commands", commandHandler(config, cmd, metrics))
 	mux.Handle("POST /commands/batch", batchHandler(config, cmd, metrics))
 
-	handler = mux
+	//inside the user idps, which set the token that otelx reads the user from
+	handler = tracing.Handler(config.OtelEndpoint, mux)
 	switch {
 	case config.RequestUserIdp == "jwt":
 	case config.RequestUserIdp == "auth":

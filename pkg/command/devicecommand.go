@@ -18,6 +18,9 @@ package command
 
 import (
 	"context"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strconv"
 	"strings"
@@ -40,6 +43,13 @@ func (this *Command) DeviceCommand(ctx context.Context, token auth.Token, device
 }
 
 func (this *Command) deviceCommand(ctx context.Context, token auth.Token, deviceId string, serviceId string, functionId string, aspectIds []string, input interface{}, timeout string, preferEventValue bool, characteristicId string) (code int, resp interface{}) {
+	ctx, span := tracing.Start(ctx, "device command",
+		attribute.String("device_id", deviceId),
+		attribute.String("service_id", serviceId),
+		attribute.String("function_id", functionId),
+		attribute.StringSlice("aspect_ids", aspectIds))
+	defer func() { tracing.EndWithStatus(span, code, resp) }()
+
 	timeoutDuration := this.config.DefaultTimeoutDuration
 	if timeout != "" {
 		parsed, err := time.ParseDuration(timeout)
@@ -82,6 +92,7 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 
 	if isMeasuringFunctionId(functionId) && (service.Interaction == model.EVENT || (preferEventValue && service.Interaction == model.EVENT_AND_REQUEST)) {
 		this.metrics.LogGetLastEventValue(token.GetUserId(), device.Id, service.Id, functionId)
+		span.SetAttributes(attribute.String("answered_from", "last value"))
 		return this.GetLastEventValue(ctx, token, device, service, protocol, characteristicId, functionId, aspectNodes, timeoutDuration)
 	}
 
@@ -110,6 +121,7 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 	}
 
 	taskId := uuid.New().String()
+	span.SetAttributes(attribute.String("answered_from", "connector"), attribute.String("task_id", taskId))
 	msg := messages.ProtocolMsg{
 		TaskInfo: messages.TaskInfo{
 			TaskId:   taskId,
@@ -139,14 +151,16 @@ func (this *Command) deviceCommand(ctx context.Context, token auth.Token, device
 
 	replies := this.replies.expect(taskId)
 	defer this.replies.forget(taskId)
-	err = this.transport.Send(msg)
+	err = this.transport.Send(ctx, msg)
 	if err != nil {
 		this.config.GetLogger().Error("unable to produce command message", "error", err)
 		return http.StatusInternalServerError, "unable to produce message"
 	}
+	span.AddEvent("command sent")
 
 	select {
 	case reply := <-replies:
+		span.AddEvent("reply received", trace.WithAttributes(attribute.Bool("failed", reply.Failed)))
 		if reply.Failed {
 			return http.StatusInternalServerError, reply.Output
 		}

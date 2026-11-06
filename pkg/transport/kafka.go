@@ -17,9 +17,11 @@
 package transport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
 	"io"
 	"log/slog"
 	"net/http"
@@ -106,14 +108,14 @@ func consume(ctx context.Context, config configuration.Config, topic string, fai
 	})
 }
 
-func (this *Kafka) Send(msg messages.ProtocolMsg) error {
+func (this *Kafka) Send(ctx context.Context, msg messages.ProtocolMsg) error {
 	message, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
 	topic := msg.Metadata.Protocol.Handler
 	if isHttpHandler(topic) {
-		return sendHttp(topic, message)
+		return sendHttp(ctx, topic, message)
 	}
 	writer, err := this.writer(topic)
 	if err != nil {
@@ -144,8 +146,18 @@ func (this *Kafka) writer(topic string) (*kafka.Producer, error) {
 	return writer, nil
 }
 
-func sendHttp(url string, message []byte) error {
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(message)))
+// sendHttp posts to a protocol handler of the platform, which continues the trace
+func sendHttp(ctx context.Context, url string, message []byte) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(message))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	err = tracing.Inject(ctx, req)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		slog.Error("unable to send command by http", "url", url, "error", err)
 		return err

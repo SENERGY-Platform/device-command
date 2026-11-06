@@ -29,6 +29,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
 	"github.com/SENERGY-Platform/device-command/pkg/transport"
 	"github.com/SENERGY-Platform/device-repository/v3/lib/client"
 	"github.com/SENERGY-Platform/device-repository/v3/lib/database"
@@ -53,6 +54,7 @@ func testMgwCommandWithTimeoutAuth(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	config.OtelEndpoint = tracing.Off //no collector in the tests
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
@@ -521,6 +523,7 @@ func TestMgwCommand(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	config.OtelEndpoint = tracing.Off //no collector in the tests
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
@@ -988,6 +991,7 @@ func TestMgwPlainTextCommandWithDockerTimescale(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	config.OtelEndpoint = tracing.Off //no collector in the tests
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
@@ -1217,6 +1221,7 @@ func TestShellyError(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	config.OtelEndpoint = tracing.Off //no collector in the tests
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"
@@ -1446,6 +1451,7 @@ func TestCharacteristicError(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	config.OtelEndpoint = tracing.Off //no collector in the tests
 	config.Debug = true
 	config.ComImpl = "mgw"
 	config.MarshallerImpl = "mgw"

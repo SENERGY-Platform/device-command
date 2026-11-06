@@ -18,6 +18,7 @@ package pkg
 
 import (
 	"context"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
 
 	"github.com/SENERGY-Platform/device-command/pkg/api"
 	"github.com/SENERGY-Platform/device-command/pkg/command"
@@ -32,6 +33,10 @@ import (
 // Start runs the service until ctx is done. Every dependency picks its cloud or gateway variant by
 // its own config switch: iot_impl, marshaller_impl, timescale_impl and com_impl.
 func Start(ctx context.Context, config configuration.Config) error {
+	err := tracing.Init(ctx, config.OtelEndpoint)
+	if err != nil {
+		config.GetLogger().Warn("unable to init open-telemetry, continuing without tracing", "error", err)
+	}
 	repo, err := devicerepo.New(ctx, config)
 	if err != nil {
 		return err

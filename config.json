@@ -1,6 +1,7 @@
 {
     "debug":true,
     "log_level": "info",
+    "otel_endpoint": "",
     "server_port":"8080",
 
     "cache_expiration": "60s",

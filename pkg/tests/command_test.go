@@ -35,6 +35,7 @@ import (
 	"github.com/SENERGY-Platform/device-command/pkg/command"
 	"github.com/SENERGY-Platform/device-command/pkg/configuration"
 	"github.com/SENERGY-Platform/device-command/pkg/messages"
+	"github.com/SENERGY-Platform/device-command/pkg/tracing"
 	"github.com/SENERGY-Platform/device-repository/v3/lib/client"
 	devicerepomodel "github.com/SENERGY-Platform/device-repository/v3/lib/model"
 	"github.com/SENERGY-Platform/models/go/models"
@@ -64,6 +65,7 @@ func TestGroupCommand_SNRGY_1883(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	config.OtelEndpoint = tracing.Off //no collector in the tests
 	config.Debug = true
 
 	config.ServerPort, err = GetFreePort()
@@ -1015,6 +1017,7 @@ func testCommand(scalingSuffix string, cloudTimescale bool) func(t *testing.T) {
 			t.Error(err)
 			return
 		}
+		config.OtelEndpoint = tracing.Off //no collector in the tests
 		config.TopicSuffixForScaling = scalingSuffix
 		config.Debug = true
 		config.InitTopics = true

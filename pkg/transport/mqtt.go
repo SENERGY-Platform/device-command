@@ -149,7 +149,8 @@ func (this *Mqtt) readError(topic string, payload []byte) (Reply, bool) {
 	return Reply{TaskId: taskId, Output: map[string]string{this.segment: string(payload)}, Failed: true}, true
 }
 
-func (this *Mqtt) Send(msg messages.ProtocolMsg) error {
+// Send publishes on the broker of the gateway; the connector there does not continue a trace.
+func (this *Mqtt) Send(_ context.Context, msg messages.ProtocolMsg) error {
 	payload, err := json.Marshal(MqttCommand{
 		CommandId: this.prefix + msg.TaskInfo.TaskId,
 		Data:      msg.Request.Input[this.segment],

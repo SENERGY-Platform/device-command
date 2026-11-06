@@ -34,7 +34,7 @@ type Reply struct {
 }
 
 type Sender interface {
-	Send(msg messages.ProtocolMsg) error
+	Send(ctx context.Context, msg messages.ProtocolMsg) error
 }
 
 // New connects to kafka, or to the mqtt broker of a gateway with com_impl "mgw". Every reply is
